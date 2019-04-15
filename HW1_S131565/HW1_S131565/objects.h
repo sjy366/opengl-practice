@@ -850,7 +850,7 @@ void draw_sword() {
 
 // slug
 
-GLfloat slug_body[4][2] = { {6,0}, {0,8}, {-6,0}, {0,-8} };
+GLfloat slug_body[4][2] = { {3.5,0}, {0,4.5}, {-3.5,0}, {0,-4.5} };
 
 GLfloat slug_color[1][3] = {{ 255 / 255.0f, 0 / 255.0f, 102 / 255.0f }};
 
@@ -890,7 +890,7 @@ void draw_slug() {
 
 // slug2
 
-GLfloat slug2_body[4][2] = { {6,0}, {0,8}, {-6,0}, {0,-8} };
+GLfloat slug2_body[4][2] = { {3,0}, {0,4}, {-3,0}, {0,-4} };
 
 GLfloat slug2_color[1][3] = { { 255 / 255.0f, 255 / 255.0f, 51 / 255.0f } };
 

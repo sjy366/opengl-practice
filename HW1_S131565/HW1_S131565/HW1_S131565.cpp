@@ -4,50 +4,79 @@
 #include <time.h>
 #include <stdlib.h>
 
-#define AIRPLANE_ROTATION_RADIUS 200.0f
-#define BASE_SCALE 18
+#define BASE_SCALE 10
 
 using namespace std;
 
-int distance(int x, int y, int xx, int yy)
+float distance(float x, float y, float xx, float yy)
 {
 	return (x - xx)*(x - xx) + (y - yy)*(y - yy);
 }
 
 struct slug
 {
-	int x, y;
+	float x, y;
 	int type;
-	int speed;
+	float speed;
+	int dir;
+	int dir_count;
+	float count;
 	bool flag;
 	bool alive;
 
-	slug(int xx, int yy, int t, int s, bool f)
+	slug(float xx, float yy, int t, float s, bool f)
 	{
 		x = xx; y = yy;
 		type = t;
 		speed = s;
+		count = 0;
 		flag = f;
 		alive = 1;
+		dir = 1;
+		dir_count = 0;
 	}
 	void move()
 	{
-		int dx, dy;
+		float dx, dy;
 		switch (type)
 		{
-		case 0:
+		case -1:
 			dx = 0; dy = 1;
 			break;
+		case 0:
+			dx = 0.25 * dir; dy = 0.5;
+			break;
 		case 1:
-			dx = 0; dy = -1;
+			dx = 0.25; dy = 0.5;
 			break;
 		case 2:
+			dx = -0.25; dy = 0.5;
+			break;
 		case 3:
+			dx = (float)sin(count) / 3; dy = 0.5;
+			break;
 		case 4:
+			dx = -(float)sin(count) / 3; dy = 0.5;
+			break;
+		case 5:
+			dx = -0.3; dy = 0.5;
+			break;
+		case 6:
+			dx = 0.3; dy = 0.5;
+			break;
+		case 7:
+			dx = -0.7; dy = 0.5;
+			break;
+		case 8:
+			dx = 0.7; dy = 0.5;
 			break;
 		}
+		if (flag) dy *= -1;
 		dx *= speed; dy *= speed;
 		x += dx; y += dy;
+		count += 0.01;
+		dir_count++;
+		if(dir_count % 70 == 0) dir *= -1;
 	}
 	void collision_check();
 	bool boundary_check()
@@ -61,44 +90,73 @@ deque<slug> slug_vec;
 
 struct airplane
 {
-	int x, y;
-	int scale;
+	float x, y;
+	float scale;
 	int level;
 	bool load;
 	bool alive;
 
-	airplane(int xx, int yy)
+	airplane(float xx, float yy)
 	{
 		x = xx; y = yy;
-		scale = 1;
+		scale = 0.5;
 		level = 0;
 		load = 1;
 		alive = 1;
 	}
-	void move(int dx, int dy)
+	void move(float dx, float dy)
 	{
 		x += dx;
 		y += dy;
 	}
 	void level_up()
 	{
-		if (level < 2) level++;
+		if (level < 2)
+		{
+			level++;
+			printf("level up!! [%d]\n", level);
+		}
+	}
+	void level_down()
+	{
+		if (level == 0) alive = 0;
+		else
+		{
+			level--;
+			printf("level down!! [%d]\n", level);
+		}
 	}
 	void shoot()
 	{
 		if (load)
 		{
-			slug_vec.push_back(slug(x, y, 0, 7, 0));
+			switch (level)
+			{
+			case 0:
+				slug_vec.push_back(slug(x, y, -1, 6, 0));
+				break;
+			case 1:
+				slug_vec.push_back(slug(x, y, -1, 8, 0));
+				slug_vec.push_back(slug(x, y, 5, 8, 0));
+				slug_vec.push_back(slug(x, y, 6, 8, 0));
+				break;
+			case 2:
+				slug_vec.push_back(slug(x, y, -1, 10, 0));
+				slug_vec.push_back(slug(x, y, 0, 10, 0));
+				slug_vec.push_back(slug(x, y, 1, 10, 0));
+				slug_vec.push_back(slug(x, y, 2, 10, 0));
+				slug_vec.push_back(slug(x, y, 3, 10, 0));
+				slug_vec.push_back(slug(x, y, 4, 10, 0));
+				slug_vec.push_back(slug(x, y, 7, 10, 0));
+				slug_vec.push_back(slug(x, y, 8, 10, 0));
+				break;
+			}
 			load = 0;
 		}
 	}
 	void reload()
 	{
 		load = 1;
-	}
-	void die()
-	{
-		alive = 0;
 	}
 	bool boundary_check()
 	{
@@ -114,19 +172,19 @@ struct airplane
 
 struct enemy
 {
-	int x, y;
-	int dx, dy;
-	int rotate;
+	float x, y;
+	float dx, dy;
+	float rotate;
 	int type;
-	int scale;
+	float scale;
 	bool alive;
 
-	enemy(int xx, int yy)
+	enemy(float xx, float yy)
 	{
-		type = rand() % 3;
+		type = rand() % 4;
 
 		x = xx; y = yy;
-		dx = 0; dy = -1;
+		dx = 0; dy = -0.5;
 		rotate = 0;
 		scale = 2;
 		alive = 1;
@@ -137,12 +195,58 @@ struct enemy
 	}
 	void shoot()
 	{
-		slug_vec.push_back(slug(x, y, 1, 4, 1));
+		switch(type)
+		{
+		case COCKTAIL:
+			slug_vec.push_back(slug(x, y, 0, 4, 1));
+			break;
+		case SHIRT:
+			slug_vec.push_back(slug(x, y, 0, 4, 1));
+			slug_vec.push_back(slug(x, y, 5, 4, 1));
+			slug_vec.push_back(slug(x, y, 6, 4, 1));
+			break;
+		case HOUSE:
+			slug_vec.push_back(slug(x, y, 0, 4, 1));
+			slug_vec.push_back(slug(x, y, 1, 4, 1));
+			slug_vec.push_back(slug(x, y, 2, 4, 1));
+			break;
+		case CAR:
+			slug_vec.push_back(slug(x, y, 0, 4, 1));
+			slug_vec.push_back(slug(x, y, 1, 4, 1));
+			slug_vec.push_back(slug(x, y, 2, 4, 1));
+			slug_vec.push_back(slug(x, y, 3, 4, 1));
+			slug_vec.push_back(slug(x, y, 4, 4, 1));
+			break;
+		}
 	}
-	void die()
+	void die();
+	bool boundary_check()
 	{
-		alive = 0;
+		if (-win_width / 2 < x && x < win_width / 2 && -win_height / 2 < y && y < win_height / 2) return 1;
+		else return 0;
 	}
+};
+
+struct items
+{
+	float x, y;
+	float dx, dy;
+	float rotate;
+	bool alive;
+	items(int xx, int yy)
+	{
+		x = xx; y = yy;
+		dx = 0; dy = -0.5;
+		rotate = 0;
+		alive = 1;
+	}
+	void move()
+	{
+		x += dx; y += dy;
+		rotate += 1;
+		if (rotate == 360) rotate = 0;
+	}
+	void collision_check();
 	bool boundary_check()
 	{
 		if (-win_width / 2 < x && x < win_width / 2 && -win_height / 2 < y && y < win_height / 2) return 1;
@@ -152,6 +256,7 @@ struct enemy
 
 airplane my_airplane(0, -300);
 deque<enemy> enemy_vec;
+deque<items> items_vec;
 int clock_count = 0;
 
 void display(void) {
@@ -160,28 +265,6 @@ void display(void) {
 	glm::mat4 ModelMatrix;
 
 	glClear(GL_COLOR_BUFFER_BIT);
-
-	/*
-	if (airplane_clock <= 360) { // 0 <= airplane_clock <= 719 
-		ModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(AIRPLANE_ROTATION_RADIUS, 0.0f, 0.0f));
-		ModelMatrix = glm::rotate(ModelMatrix, airplane_clock*TO_RADIAN, glm::vec3(0.0f, 0.0f, 1.0f));
-		ModelMatrix = glm::translate(ModelMatrix, glm::vec3(-AIRPLANE_ROTATION_RADIUS, 0.0f, 0.0f));
-	}
-	else {
-		ModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(-AIRPLANE_ROTATION_RADIUS, 0.0f, 0.0f));
-		ModelMatrix = glm::rotate(ModelMatrix, -(airplane_clock)*TO_RADIAN, glm::vec3(0.0f, 0.0f, 1.0f));
-		ModelMatrix = glm::translate(ModelMatrix, glm::vec3(AIRPLANE_ROTATION_RADIUS, 0.0f, 0.0f));
-
-		if (airplane_clock <= 540)
-			airplane_s_factor = (airplane_clock - 360.0f) / 180.0f + 1.0f;
-		else
-			airplane_s_factor = -(airplane_clock - 540.0f) / 180.0f + 2.0f;
-		ModelMatrix = glm::scale(ModelMatrix, glm::vec3(airplane_s_factor, airplane_s_factor, 1.0f));
-	}
-
-	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
-	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	draw_airplane(); */
 
 	for (int i = 0; i < slug_vec.size(); i++)
 	{
@@ -194,6 +277,20 @@ void display(void) {
 			glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 			if (!s.flag) draw_slug();
 			else draw_slug2();
+		}
+	}
+
+	for (int i = 0; i < items_vec.size(); i++)
+	{
+		items& it = items_vec[i];
+		if (it.alive)
+		{
+			ModelMatrix = glm::mat4(1.0f);
+			ModelMatrix = glm::translate(ModelMatrix, glm::vec3(it.x, it.y, 0.0f));
+			ModelMatrix = glm::rotate(ModelMatrix, it.rotate*TO_RADIAN, glm::vec3(0.0f, 0.0f, 1.0f));
+			ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
+			glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+			draw_sword();
 		}
 	}
 
@@ -231,6 +328,7 @@ void display(void) {
 		ModelMatrix = glm::mat4(1.0f);
 		ModelMatrix = glm::translate(ModelMatrix, glm::vec3(my_airplane.x, my_airplane.y, 0.0f));
 		ModelMatrix = glm::rotate(ModelMatrix, 180 * TO_RADIAN, glm::vec3(0.0f, 0.0f, 1.0f));
+		ModelMatrix = glm::scale(ModelMatrix, glm::vec3(my_airplane.scale, my_airplane.scale, 1.0f));
 		ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
 		glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 		draw_airplane(); // my_airplane
@@ -244,7 +342,7 @@ void timer(int value) {
 
 	clock_count %= 5000;
 	if (clock_count % 10 == 0) my_airplane.reload();
-	if (clock_count % 200 == 0)
+	if (clock_count % 100 == 0)
 	{
 		for (int i = 0; i < enemy_vec.size(); i++)
 			if (enemy_vec[i].alive) enemy_vec[i].shoot();
@@ -255,14 +353,27 @@ void timer(int value) {
 		enemy_vec.push_back(enemy(-win_width / 4, win_height / 2));
 	}
 
+	// slug
 	for (int i = 0; i < slug_vec.size(); i++)
 	{
 		slug_vec[i].move();
+		if (!slug_vec[i].boundary_check()) slug_vec[i].alive = 0;
 		slug_vec[i].collision_check();
 	}
 	while (!slug_vec.empty() && !slug_vec.front().boundary_check()) slug_vec.pop_front();
+
+	// enemy
 	for (int i = 0; i < enemy_vec.size(); i++) enemy_vec[i].move();
 	while (!enemy_vec.empty() && !enemy_vec.front().boundary_check()) enemy_vec.pop_front();
+
+	// items
+	for (int i = 0; i < items_vec.size(); i++)
+	{
+		items_vec[i].move();
+		if (!items_vec[i].boundary_check()) items_vec[i].alive = 0;
+		items_vec[i].collision_check();
+	}
+	while (!items_vec.empty() && !items_vec.front().boundary_check()) items_vec.pop_front();
 
 	glutPostRedisplay();
 	clock_count++;
@@ -417,16 +528,21 @@ void greetings(char *program_name, char messages[][256], int n_message_lines) {
 	for (int i = 0; i < n_message_lines; i++)
 		fprintf(stdout, "%s\n", messages[i]);
 	fprintf(stdout, "\n**************************************************************\n\n");
-
-	initialize_glew();
+	printf("\nLet's start! Your level is 0.\n");
 }
 
-#define N_MESSAGE_LINES 2
+#define N_MESSAGE_LINES 8
 void main(int argc, char *argv[]) {
 	char program_name[64] = "Sogang CSE4170 Simple OpenGL 2D Game";
 	char messages[N_MESSAGE_LINES][256] = {
-		"    - Keys used: 'ESC' & four arrow keys",
-		"    - Mouse used: L-click and move"
+		"    - Keys used:",
+		"      ESC: Exit Program",
+		"      UP, DOWN, RIGHT, LEFT: Move Airplane",
+		"      SPACE: Shoot Slug"
+		"    - Hint:",
+		"      If you eat a knife, level up.",
+		"      When the slug is hit, the level decreases.",
+		"      If you hit a slug at level 0, you die."
 	};
 
 	glutInit(&argc, argv);
@@ -436,8 +552,9 @@ void main(int argc, char *argv[]) {
 	glutInitContextProfile(GLUT_CORE_PROFILE);
 	glutCreateWindow(program_name);
 
-	greetings(program_name, messages, N_MESSAGE_LINES);
+	initialize_glew();
 	initialize_renderer();
+	greetings(program_name, messages, N_MESSAGE_LINES);
 
 	win_width = 600; win_height = 800;
 	srand((unsigned int)time(0));
@@ -448,11 +565,13 @@ void main(int argc, char *argv[]) {
 
 void slug::collision_check()
 {
+	if (!alive) return;
 	if (flag) // my
 	{
-		if (distance(x, y, my_airplane.x, my_airplane.y) < (BASE_SCALE*my_airplane.scale)*(BASE_SCALE*my_airplane.scale))
+		if (my_airplane.alive && distance(x, y, my_airplane.x, my_airplane.y) < (BASE_SCALE*my_airplane.scale)*(BASE_SCALE*my_airplane.scale))
 		{
-			my_airplane.die();
+
+			my_airplane.level_down();
 			alive = 0;
 		}
 	}
@@ -461,7 +580,7 @@ void slug::collision_check()
 		for (int i = 0; i < enemy_vec.size(); i++)
 		{
 			enemy& e = enemy_vec[i];
-			if (distance(x, y, e.x, e.y) < (BASE_SCALE - 8)*e.scale*(BASE_SCALE - 8)*e.scale)
+			if (e.alive && distance(x, y, e.x, e.y) < ((BASE_SCALE+5)*e.scale*(BASE_SCALE+5)*e.scale))
 			{
 				e.die();
 				alive = 0;
@@ -469,4 +588,19 @@ void slug::collision_check()
 			}
 		}
 	}
+}
+
+void items::collision_check()
+{
+	if (alive && distance(x, y, my_airplane.x, my_airplane.y) < (BASE_SCALE + 5)*(BASE_SCALE + 5))
+	{
+		my_airplane.level_up();
+		alive = 0;
+	}
+}
+
+void enemy::die()
+{
+	alive = 0;
+	items_vec.push_back(items(x, y));
 }
