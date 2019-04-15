@@ -181,7 +181,7 @@ struct airplane
 #define COCKTAIL 0
 #define SHIRT 1
 #define HOUSE 2
-#define CAR 3
+#define PIKACHU 3
 
 struct enemy
 {
@@ -206,6 +206,7 @@ struct enemy
 		dir_count = 0;
 		dir = 1;
 		scale = 1.5;
+		if (type == PIKACHU) scale = 2.5;
 		alive = 1;
 	}
 	void move()
@@ -248,7 +249,7 @@ struct enemy
 			slug_vec.push_back(slug(x, y, 1, 4, 1));
 			slug_vec.push_back(slug(x, y, 2, 4, 1));
 			break;
-		case CAR:
+		case PIKACHU:
 			slug_vec.push_back(slug(x, y, 0, 4, 1));
 			slug_vec.push_back(slug(x, y, 1, 4, 1));
 			slug_vec.push_back(slug(x, y, 2, 4, 1));
@@ -440,8 +441,8 @@ void display(void) {
 			case HOUSE:
 				draw_house();
 				break;
-			case CAR:
-				draw_car();
+			case PIKACHU:
+				draw_pikachu();
 				break;
 			}
 		}
@@ -701,6 +702,7 @@ void prepare_scene(void) {
 	prepare_slug();
 	prepare_slug2();
 	prepare_ufo();
+	prepare_pikachu();
 }
 
 void initialize_renderer(void) {
@@ -790,7 +792,7 @@ void slug::collision_check()
 		for (int i = 0; i < enemy_vec.size(); i++)
 		{
 			enemy& e = enemy_vec[i];
-			if (e.alive && distance(x, y, e.x, e.y) < ((BASE_SCALE+5)*e.scale*(BASE_SCALE+5)*e.scale))
+			if (e.alive && distance(x, y, e.x, e.y) < ((BASE_SCALE+5)*1.5*(BASE_SCALE+5)*1.5))
 			{
 				e.die();
 				alive = 0;
