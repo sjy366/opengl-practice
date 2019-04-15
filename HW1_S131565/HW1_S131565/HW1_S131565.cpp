@@ -5,6 +5,8 @@
 #include <stdlib.h>
 
 #define BASE_SCALE 10
+#define KING_IS_COMING 20
+#define KING_HP 50
 
 using namespace std;
 
@@ -13,9 +15,12 @@ float distance(float x, float y, float xx, float yy)
 	return (x - xx)*(x - xx) + (y - yy)*(y - yy);
 }
 
+#define KING_TYPE_SLUG -2
+#define BASE_TYPE_SLUG -1
 struct slug
 {
 	float x, y;
+	float kx, ky;
 	int type;
 	float speed;
 	int dir;
@@ -27,10 +32,23 @@ struct slug
 	slug(float xx, float yy, int t, float s, bool f)
 	{
 		x = xx; y = yy;
+		kx = 0; ky = 0;
 		type = t;
 		speed = s;
 		count = 0;
 		flag = f;
+		alive = 1;
+		dir = 1;
+		dir_count = 0;
+	}
+	slug(float xx, float yy, float s, float ddx, float ddy, void* aux)
+	{
+		x = xx; y = yy;
+		kx = ddx; ky = ddy;
+		type = KING_TYPE_SLUG;
+		speed = s;
+		count = 0;
+		flag = 1;
 		alive = 1;
 		dir = 1;
 		dir_count = 0;
@@ -40,7 +58,10 @@ struct slug
 		float dx, dy;
 		switch (type)
 		{
-		case -1:
+		case KING_TYPE_SLUG:
+			dx = kx; dy = ky;
+			break;
+		case BASE_TYPE_SLUG:
 			dx = 0; dy = 1;
 			break;
 		case 0:
@@ -117,15 +138,7 @@ struct airplane
 			printf("level up!! [%d]\n", level);
 		}
 	}
-	void level_down()
-	{
-		if (level == 0) alive = 0;
-		else
-		{
-			level--;
-			printf("level down!! [%d]\n", level);
-		}
-	}
+	void level_down();
 	void shoot()
 	{
 		if (load)
@@ -133,15 +146,15 @@ struct airplane
 			switch (level)
 			{
 			case 0:
-				slug_vec.push_back(slug(x, y, -1, 6, 0));
+				slug_vec.push_back(slug(x, y, BASE_TYPE_SLUG, 6, 0));
 				break;
 			case 1:
-				slug_vec.push_back(slug(x, y, -1, 8, 0));
+				slug_vec.push_back(slug(x, y, BASE_TYPE_SLUG, 8, 0));
 				slug_vec.push_back(slug(x, y, 5, 8, 0));
 				slug_vec.push_back(slug(x, y, 6, 8, 0));
 				break;
 			case 2:
-				slug_vec.push_back(slug(x, y, -1, 10, 0));
+				slug_vec.push_back(slug(x, y, BASE_TYPE_SLUG, 10, 0));
 				slug_vec.push_back(slug(x, y, 0, 10, 0));
 				slug_vec.push_back(slug(x, y, 1, 10, 0));
 				slug_vec.push_back(slug(x, y, 2, 10, 0));
@@ -175,6 +188,9 @@ struct enemy
 	float x, y;
 	float dx, dy;
 	float rotate;
+	float count;
+	int dir_count;
+	int dir;
 	int type;
 	float scale;
 	bool alive;
@@ -186,12 +202,34 @@ struct enemy
 		x = xx; y = yy;
 		dx = 0; dy = -0.5;
 		rotate = 0;
-		scale = 2;
+		count = 0;
+		dir_count = 0;
+		dir = 1;
+		scale = 1.5;
 		alive = 1;
 	}
 	void move()
 	{
+		float dx, dy;
+		switch (type)
+		{
+		case 0:
+			dx = 0.25 * dir; dy = -0.5;
+			break;
+		case 1:
+			dx = 0.25; dy = -0.5;
+			break;
+		case 2:
+			dx = (float)sin(count) / 3; dy = -0.5;
+			break;
+		case 3:
+			dx = -(float)sin(count) / 3; dy = -0.5;
+			break;
+		}
 		x += dx; y += dy;
+		count += 0.01;
+		dir_count++;
+		if (dir_count % 70 == 0) dir *= -1;
 	}
 	void shoot()
 	{
@@ -227,6 +265,63 @@ struct enemy
 	}
 };
 
+struct enemy_king
+{
+	float x, y;
+	float dx, dy;
+	float scale;
+	int hp;
+	bool alive;
+
+	enemy_king()
+	{
+		dx = 0; dy = -0.3;
+		scale = 5;
+		hp = KING_HP;
+		alive = 1;
+	}
+	void set_xy(float xx, float yy)
+	{
+		x = xx; y = yy;
+	}
+	void damage()
+	{
+		if (hp > 0)
+		{
+			hp--;
+			printf("HP of the king: %d!!\n", hp);
+		}
+		else alive = 0;
+	}
+	void move()
+	{
+		x += dx; y += dy;
+		if (y < win_height / 3) y -= dy;
+	}
+	void shoot()
+	{
+		float a, b;
+		slug_vec.push_back(slug(x, y, 3, 8, 1));
+		slug_vec.push_back(slug(x, y, 4, 8, 1));
+		for (float i = -0.6, a = 1; i < 0; i += 0.4 * a, a += 1)
+		{
+			for (float j = -1, b = 1; j < 0; j += 0.3 * b, b += 1)
+				slug_vec.push_back(slug(x, y, 8, i, j, NULL));
+			for (float j = 1, b = 1; j >= 0; j -= 0.3 * b, b += 1)
+				slug_vec.push_back(slug(x, y, 8, i, j, NULL));
+		}
+		for (float i = 0.6, a = 1; i >= 0; i -= 0.4 * a, a += 1)
+		{
+			for (float j = -1, b = 1; j < 0; j += 0.3 * b, b += 1)
+				slug_vec.push_back(slug(x, y, 8, i, j, NULL));
+			for (float j = 1, b = 1; j >= 0; j -= 0.3 * b, b += 1)
+				slug_vec.push_back(slug(x, y, 8, i, j, NULL));
+		}
+		for(int i=0; i<8; i++)
+			slug_vec.push_back(slug(x, y, rand() % 9, 8, 1));
+	}
+};
+
 struct items
 {
 	float x, y;
@@ -254,10 +349,39 @@ struct items
 	}
 };
 
+struct effect
+{
+	float x, y;
+	float r[3];
+	bool alive;
+	effect(float xx, float yy)
+	{
+		x = xx; y = yy;
+		r[0] = 0;
+		r[1] = -5;
+		r[2] = -10;
+		alive = 1;
+	}
+	void move()
+	{
+		for (int i = 0; i < 3; i++) r[i] += 0.5;
+		if (r[2] > 30) alive = 0;
+	}
+};
+
 airplane my_airplane(0, -300);
+enemy_king king;
 deque<enemy> enemy_vec;
 deque<items> items_vec;
+deque<effect> effect_vec;
 int clock_count = 0;
+int kill = 0;
+// for effect
+int ax[8] = {1, 1, 0, -1, -1, -1, 0, 1};
+int bx[8] = {0, -1, 0, 1, 0, 1, 0, -1};
+int ay[8] = {0, 1, 1, 1, 0, -1, -1, -1};
+int by[8] = {0, -1, 0, -1, 0, 1, 0, 1};
+bool king_stage = 0;
 
 void display(void) {
 	int i;
@@ -323,6 +447,37 @@ void display(void) {
 		}
 	}
 
+	for (int i = 0; i < effect_vec.size(); i++)
+	{
+		effect& e = effect_vec[i];
+		if (e.alive)
+		{
+			for (int j = 0; j < 3; j++)
+			{
+				for (int k = 0; k < 8; k++)
+				{
+					ModelMatrix = glm::mat4(1.0f);
+					ModelMatrix = glm::translate(ModelMatrix, glm::vec3(ax[k]*e.r[j]+bx[k] + e.x, ay[k]*e.r[j]+by[k] + e.y, 0.0f));
+					ModelMatrix = glm::rotate(ModelMatrix, e.r[j]*TO_RADIAN, glm::vec3(0.0f, 0.0f, 1.0f));
+					ModelMatrix = glm::scale(ModelMatrix, glm::vec3(0.3 * (j+1), 0.3 * (j+1), 1.0f));
+					ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
+					glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+					draw_cake();
+				}
+			}
+		}
+	}
+
+	if (king_stage && king.alive)
+	{
+		ModelMatrix = glm::mat4(1.0f);
+		ModelMatrix = glm::translate(ModelMatrix, glm::vec3(king.x, king.y, 0.0f));
+		ModelMatrix = glm::scale(ModelMatrix, glm::vec3(king.scale, king.scale, 1.0f));
+		ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
+		glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+		draw_car2();
+	}
+
 	if (my_airplane.alive)
 	{
 		ModelMatrix = glm::mat4(1.0f);
@@ -337,20 +492,45 @@ void display(void) {
 	glFlush();
 }
 
+bool game_over = 0;
 void timer(int value) {
-	airplane_clock = (airplane_clock + 1) % 720;
-
-	clock_count %= 5000;
+	clock_count %= 6000;
 	if (clock_count % 10 == 0) my_airplane.reload();
+	// enemy shoot
 	if (clock_count % 100 == 0)
 	{
 		for (int i = 0; i < enemy_vec.size(); i++)
 			if (enemy_vec[i].alive) enemy_vec[i].shoot();
 	}
-	if (clock_count % 1000 == 0)
+	// gen enemy
+	if (kill < KING_IS_COMING)
 	{
-		enemy_vec.push_back(enemy(win_width / 4, win_height / 2));
-		enemy_vec.push_back(enemy(-win_width / 4, win_height / 2));
+		if (clock_count % 600 == 0)
+			enemy_vec.push_back(enemy(win_width / (rand() % 2 + 3), win_height / 2));
+		if (clock_count % 600 == 300)
+			enemy_vec.push_back(enemy(-win_width / (rand() % 2 + 3), win_height / 2));
+	}
+	else // gen enemy king
+	{
+		if (king_stage)
+		{
+			if(king.alive)
+			{
+				king.move();
+				if (clock_count % 80 == 0) king.shoot();
+				if (clock_count % 300 == 0)
+				{
+					enemy_vec.push_back(enemy(win_width / 2 - 30, win_height / 2));
+					enemy_vec.push_back(enemy(-win_width / 2 + 30, win_height / 2));
+				}
+			}
+		}
+		else
+		{
+			printf("The enemy king is coming!!\n");
+			king.set_xy(0, win_height / 2 + 30);
+			king_stage = 1;
+		}
 	}
 
 	// slug
@@ -375,9 +555,25 @@ void timer(int value) {
 	}
 	while (!items_vec.empty() && !items_vec.front().boundary_check()) items_vec.pop_front();
 
+	// effect
+	for (int i = 0; i < effect_vec.size(); i++) effect_vec[i].move();
+	while (!effect_vec.empty() && !effect_vec.front().alive) effect_vec.pop_front();
+
 	glutPostRedisplay();
 	clock_count++;
-	if (my_airplane.alive) glutTimerFunc(10, timer, 0);
+
+	if (!my_airplane.alive && !game_over)
+	{
+		printf("GAME OVER!!\n");
+		game_over = 1;
+	}
+	if (!king.alive && !game_over)
+	{
+		while (!enemy_vec.empty()) enemy_vec.pop_front();
+		printf("GAME CLEAR!!\n");
+		game_over = 1;
+	}
+	glutTimerFunc(10, timer, 0);
 }
 
 void keyboard(unsigned char key, int x, int y) {
@@ -528,21 +724,25 @@ void greetings(char *program_name, char messages[][256], int n_message_lines) {
 	for (int i = 0; i < n_message_lines; i++)
 		fprintf(stdout, "%s\n", messages[i]);
 	fprintf(stdout, "\n**************************************************************\n\n");
-	printf("\nLet's start! Your level is 0.\n");
+	printf("\nLet's start!\nYour level is 0.\n");
 }
 
-#define N_MESSAGE_LINES 8
+#define N_MESSAGE_LINES 12
 void main(int argc, char *argv[]) {
 	char program_name[64] = "Sogang CSE4170 Simple OpenGL 2D Game";
 	char messages[N_MESSAGE_LINES][256] = {
 		"    - Keys used:",
-		"      ESC: Exit Program",
-		"      UP, DOWN, RIGHT, LEFT: Move Airplane",
-		"      SPACE: Shoot Slug"
+		"      ESC: 프로그램 종료",
+		"      상하좌우: 비행기 이동",
+		"      SPACE: 슬러그 발사\n"
 		"    - Hint:",
-		"      If you eat a knife, level up.",
-		"      When the slug is hit, the level decreases.",
-		"      If you hit a slug at level 0, you die."
+		"      적군을 죽이면, 일정확률로 강화무기가 나온다.",
+		"      강화무기를 먹으면, 레벨이 올라간다.",
+		"      레벨이 올라가면, 슬러그의 형태가 바뀌고 1몫이 추가된다.",
+		"      최대 레벨은 2 이다.",
+		"      일정수 이상의 적군을 죽이면, 최종보스가 등장한다.",
+		"      최종보스는 여러대를 맞추어야 죽는다.",
+		"      최종보스를 잡으면 게임이 종료된다."
 	};
 
 	glutInit(&argc, argv);
@@ -587,6 +787,12 @@ void slug::collision_check()
 				break;
 			}
 		}
+		if (king_stage && king.alive &&
+			distance(x, y, king.x, king.y) < (BASE_SCALE*king.scale*BASE_SCALE*king.scale + 50))
+		{
+			king.damage();
+			alive = 0;
+		}
 	}
 }
 
@@ -602,5 +808,22 @@ void items::collision_check()
 void enemy::die()
 {
 	alive = 0;
-	items_vec.push_back(items(x, y));
+	kill++;
+	printf("Killed %d enemies!!\n", kill);
+	if(rand() % 3 == 0) items_vec.push_back(items(x, y));
+	effect_vec.push_back(effect(x, y));
+}
+
+void airplane::level_down()
+{
+	if (level == 0)
+	{
+		effect_vec.push_back(effect(x, y));
+		alive = 0;
+	}
+	else
+	{
+		level--;
+		printf("level down!! [%d]\n", level);
+	}
 }
