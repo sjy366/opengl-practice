@@ -1,6 +1,158 @@
 #include "objects.h"
+#include <deque>
+#include <math.h>
+#include <time.h>
+#include <stdlib.h>
 
 #define AIRPLANE_ROTATION_RADIUS 200.0f
+#define BASE_SCALE 18
+
+using namespace std;
+
+int distance(int x, int y, int xx, int yy)
+{
+	return (x - xx)*(x - xx) + (y - yy)*(y - yy);
+}
+
+struct slug
+{
+	int x, y;
+	int type;
+	int speed;
+	bool flag;
+	bool alive;
+
+	slug(int xx, int yy, int t, int s, bool f)
+	{
+		x = xx; y = yy;
+		type = t;
+		speed = s;
+		flag = f;
+		alive = 1;
+	}
+	void move()
+	{
+		int dx, dy;
+		switch (type)
+		{
+		case 0:
+			dx = 0; dy = 1;
+			break;
+		case 1:
+			dx = 0; dy = -1;
+			break;
+		case 2:
+		case 3:
+		case 4:
+			break;
+		}
+		dx *= speed; dy *= speed;
+		x += dx; y += dy;
+	}
+	void collision_check();
+	bool boundary_check()
+	{
+		if (-win_width/2 < x && x < win_width/2 && -win_height/2 < y && y < win_height/2) return 1;
+		else return 0;
+	}
+};
+
+deque<slug> slug_vec;
+
+struct airplane
+{
+	int x, y;
+	int scale;
+	int level;
+	bool load;
+	bool alive;
+
+	airplane(int xx, int yy)
+	{
+		x = xx; y = yy;
+		scale = 1;
+		level = 0;
+		load = 1;
+		alive = 1;
+	}
+	void move(int dx, int dy)
+	{
+		x += dx;
+		y += dy;
+	}
+	void level_up()
+	{
+		if (level < 2) level++;
+	}
+	void shoot()
+	{
+		if (load)
+		{
+			slug_vec.push_back(slug(x, y, 0, 7, 0));
+			load = 0;
+		}
+	}
+	void reload()
+	{
+		load = 1;
+	}
+	void die()
+	{
+		alive = 0;
+	}
+	bool boundary_check()
+	{
+		if (-win_width/2 < x && x < win_width/2 && -win_height/2 < y && y < win_height/2) return 1;
+		else return 0;
+	}
+};
+
+#define COCKTAIL 0
+#define SHIRT 1
+#define HOUSE 2
+#define CAR 3
+
+struct enemy
+{
+	int x, y;
+	int dx, dy;
+	int rotate;
+	int type;
+	int scale;
+	bool alive;
+
+	enemy(int xx, int yy)
+	{
+		type = rand() % 3;
+
+		x = xx; y = yy;
+		dx = 0; dy = -1;
+		rotate = 0;
+		scale = 2;
+		alive = 1;
+	}
+	void move()
+	{
+		x += dx; y += dy;
+	}
+	void shoot()
+	{
+		slug_vec.push_back(slug(x, y, 1, 4, 1));
+	}
+	void die()
+	{
+		alive = 0;
+	}
+	bool boundary_check()
+	{
+		if (-win_width / 2 < x && x < win_width / 2 && -win_height / 2 < y && y < win_height / 2) return 1;
+		else return 0;
+	}
+};
+
+airplane my_airplane(0, -300);
+deque<enemy> enemy_vec;
+int clock_count = 0;
 
 void display(void) {
 	int i;
@@ -9,13 +161,7 @@ void display(void) {
 
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	ModelMatrix = glm::mat4(1.0f);
-	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
-	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	draw_axes();
-	draw_line();
-	draw_airplane(); // In MC
-
+	/*
 	if (airplane_clock <= 360) { // 0 <= airplane_clock <= 719 
 		ModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(AIRPLANE_ROTATION_RADIUS, 0.0f, 0.0f));
 		ModelMatrix = glm::rotate(ModelMatrix, airplane_clock*TO_RADIAN, glm::vec3(0.0f, 0.0f, 1.0f));
@@ -35,15 +181,92 @@ void display(void) {
 
 	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	draw_airplane(); // Autonomous
+	draw_airplane(); */
 
-	ModelMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(centerx, centery, 0.0f));
-	ModelMatrix = glm::rotate(ModelMatrix, rotate_angle, glm::vec3(0.0f, 0.0f, 1.0f));
-	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
-	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	draw_airplane(); // Through mouse or keyboard
+	for (int i = 0; i < slug_vec.size(); i++)
+	{
+		slug& s = slug_vec[i];
+		if (s.alive)
+		{
+			ModelMatrix = glm::mat4(1.0f);
+			ModelMatrix = glm::translate(ModelMatrix, glm::vec3(s.x, s.y, 0.0f));
+			ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
+			glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+			if (!s.flag) draw_slug();
+			else draw_slug2();
+		}
+	}
+
+	for (int i = 0; i < enemy_vec.size(); i++)
+	{
+		enemy& e = enemy_vec[i];
+		if (e.alive)
+		{
+			ModelMatrix = glm::mat4(1.0f);
+			ModelMatrix = glm::translate(ModelMatrix, glm::vec3(e.x, e.y, 0.0f));
+			ModelMatrix = glm::scale(ModelMatrix, glm::vec3(e.scale, e.scale, 1.0f));
+			ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
+			glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+
+			switch (e.type)
+			{
+			case COCKTAIL:
+				draw_cocktail();
+				break;
+			case SHIRT:
+				draw_shirt();
+				break;
+			case HOUSE:
+				draw_house();
+				break;
+			case CAR:
+				draw_car();
+				break;
+			}
+		}
+	}
+
+	if (my_airplane.alive)
+	{
+		ModelMatrix = glm::mat4(1.0f);
+		ModelMatrix = glm::translate(ModelMatrix, glm::vec3(my_airplane.x, my_airplane.y, 0.0f));
+		ModelMatrix = glm::rotate(ModelMatrix, 180 * TO_RADIAN, glm::vec3(0.0f, 0.0f, 1.0f));
+		ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
+		glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+		draw_airplane(); // my_airplane
+	}
 
 	glFlush();
+}
+
+void timer(int value) {
+	airplane_clock = (airplane_clock + 1) % 720;
+
+	clock_count %= 5000;
+	if (clock_count % 10 == 0) my_airplane.reload();
+	if (clock_count % 200 == 0)
+	{
+		for (int i = 0; i < enemy_vec.size(); i++)
+			if (enemy_vec[i].alive) enemy_vec[i].shoot();
+	}
+	if (clock_count % 1000 == 0)
+	{
+		enemy_vec.push_back(enemy(win_width / 4, win_height / 2));
+		enemy_vec.push_back(enemy(-win_width / 4, win_height / 2));
+	}
+
+	for (int i = 0; i < slug_vec.size(); i++)
+	{
+		slug_vec[i].move();
+		slug_vec[i].collision_check();
+	}
+	while (!slug_vec.empty() && !slug_vec.front().boundary_check()) slug_vec.pop_front();
+	for (int i = 0; i < enemy_vec.size(); i++) enemy_vec[i].move();
+	while (!enemy_vec.empty() && !enemy_vec.front().boundary_check()) enemy_vec.pop_front();
+
+	glutPostRedisplay();
+	clock_count++;
+	if (my_airplane.alive) glutTimerFunc(10, timer, 0);
 }
 
 void keyboard(unsigned char key, int x, int y) {
@@ -51,65 +274,43 @@ void keyboard(unsigned char key, int x, int y) {
 	case 27: // ESC key
 		glutLeaveMainLoop(); // Incur destuction callback for cleanups.
 		break;
+	case 32: // SPACE key
+		my_airplane.shoot();
+		//printf("*********************************************\n");
+		//for (int i = 0; i < slug_vec.size(); i++)
+		//	printf("%d: [%d %d]\n", i, slug_vec[i].x, slug_vec[i].y);
+		break;
 	}
 }
 
 void special(int key, int x, int y) {
-#define SENSITIVITY 2.0
+#define SENSITIVITY 25.0
 	switch (key) {
 	case GLUT_KEY_LEFT:
-		centerx -= SENSITIVITY;
-		glutPostRedisplay();
+		my_airplane.move(-SENSITIVITY, 0);
+		if (!my_airplane.boundary_check()) my_airplane.move(SENSITIVITY, 0);
 		break;
 	case GLUT_KEY_RIGHT:
-		centerx += SENSITIVITY;
-		glutPostRedisplay();
+		my_airplane.move(SENSITIVITY, 0);
+		if (!my_airplane.boundary_check()) my_airplane.move(-SENSITIVITY, 0);
 		break;
 	case GLUT_KEY_DOWN:
-		centery -= SENSITIVITY;
-		glutPostRedisplay();
+		my_airplane.move(0, -SENSITIVITY);
+		if (!my_airplane.boundary_check()) my_airplane.move(0, SENSITIVITY);
 		break;
 	case GLUT_KEY_UP:
-		centery += SENSITIVITY;
-		glutPostRedisplay();
+		my_airplane.move(0, SENSITIVITY);
+		if (!my_airplane.boundary_check()) my_airplane.move(0, -SENSITIVITY);
 		break;
 	}
+	//printf("x: %d, y: %d\n", my_airplane.x, my_airplane.y);
+	//glutPostRedisplay();
 }
 
-int leftbuttonpressed = 0;
 void mouse(int button, int state, int x, int y) {
-	if ((button == GLUT_LEFT_BUTTON) && (state == GLUT_DOWN))
-		leftbuttonpressed = 1;
-	else if ((button == GLUT_LEFT_BUTTON) && (state == GLUT_UP))
-		leftbuttonpressed = 0;
 }
 
 void motion(int x, int y) {
-	static int delay = 0;
-	static float tmpx = 0.0, tmpy = 0.0;
-	float dx, dy;
-	if (leftbuttonpressed) {
-		centerx = x - win_width / 2.0f, centery = (win_height - y) - win_height / 2.0f;
-		if (delay == 8) {
-			dx = centerx - tmpx;
-			dy = centery - tmpy;
-
-			if (dx > 0.0) {
-				rotate_angle = atan(dy / dx) + 90.0f*TO_RADIAN;
-			}
-			else if (dx < 0.0) {
-				rotate_angle = atan(dy / dx) - 90.0f*TO_RADIAN;
-			}
-			else if (dx == 0.0) {
-				if (dy > 0.0) rotate_angle = 180.0f*TO_RADIAN;
-				else  rotate_angle = 0.0f;
-			}
-			tmpx = centerx, tmpy = centery;
-			delay = 0;
-		}
-		glutPostRedisplay();
-		delay++;
-	}
 }
 
 void reshape(int width, int height) {
@@ -120,16 +321,9 @@ void reshape(int width, int height) {
 		-win_height / 2.0, win_height / 2.0, -1000.0, 1000.0);
 	ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
 
-	update_axes();
-	update_line();
+	//printf("width: %d, height: %d\n", win_width, win_height);
 
 	glutPostRedisplay();
-}
-
-void timer(int value) {
-	airplane_clock = (airplane_clock + 1) % 720;
-	glutPostRedisplay();
-	glutTimerFunc(10, timer, 0);
 }
 
 void cleanup(void) {
@@ -172,7 +366,7 @@ void initialize_OpenGL(void) {
 	glEnable(GL_MULTISAMPLE);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-	glClearColor(44 / 255.0f, 180 / 255.0f, 49 / 255.0f, 1.0f);
+	glClearColor(30 / 255.0f, 30 / 255.0f, 30 / 255.0f, 1.0f);
 	ViewMatrix = glm::mat4(1.0f);
 }
 
@@ -180,6 +374,16 @@ void prepare_scene(void) {
 	prepare_axes();
 	prepare_line();
 	prepare_airplane();
+	prepare_shirt();
+	prepare_house();
+	prepare_car();
+	prepare_cocktail();
+	prepare_car2();
+	prepare_hat();
+	prepare_cake();
+	prepare_sword();
+	prepare_slug();
+	prepare_slug2();
 }
 
 void initialize_renderer(void) {
@@ -209,8 +413,6 @@ void initialize_glew(void) {
 void greetings(char *program_name, char messages[][256], int n_message_lines) {
 	fprintf(stdout, "**************************************************************\n\n");
 	fprintf(stdout, "  PROGRAM NAME: %s\n\n", program_name);
-	fprintf(stdout, "    This program was coded for CSE4170 students\n");
-	fprintf(stdout, "      of Dept. of Comp. Sci. & Eng., Sogang University.\n\n");
 
 	for (int i = 0; i < n_message_lines; i++)
 		fprintf(stdout, "%s\n", messages[i]);
@@ -221,7 +423,7 @@ void greetings(char *program_name, char messages[][256], int n_message_lines) {
 
 #define N_MESSAGE_LINES 2
 void main(int argc, char *argv[]) {
-	char program_name[64] = "Sogang CSE4170 Simple2DTransformationMotion_GLSL_3.0.1";
+	char program_name[64] = "Sogang CSE4170 Simple OpenGL 2D Game";
 	char messages[N_MESSAGE_LINES][256] = {
 		"    - Keys used: 'ESC' & four arrow keys",
 		"    - Mouse used: L-click and move"
@@ -229,7 +431,7 @@ void main(int argc, char *argv[]) {
 
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGBA | GLUT_MULTISAMPLE);
-	glutInitWindowSize(1200, 800);
+	glutInitWindowSize(600, 800);
 	glutInitContextVersion(4, 0);
 	glutInitContextProfile(GLUT_CORE_PROFILE);
 	glutCreateWindow(program_name);
@@ -237,8 +439,34 @@ void main(int argc, char *argv[]) {
 	greetings(program_name, messages, N_MESSAGE_LINES);
 	initialize_renderer();
 
+	win_width = 600; win_height = 800;
+	srand((unsigned int)time(0));
+
 	glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS);
 	glutMainLoop();
 }
 
-
+void slug::collision_check()
+{
+	if (flag) // my
+	{
+		if (distance(x, y, my_airplane.x, my_airplane.y) < (BASE_SCALE*my_airplane.scale)*(BASE_SCALE*my_airplane.scale))
+		{
+			my_airplane.die();
+			alive = 0;
+		}
+	}
+	else // enemy
+	{
+		for (int i = 0; i < enemy_vec.size(); i++)
+		{
+			enemy& e = enemy_vec[i];
+			if (distance(x, y, e.x, e.y) < (BASE_SCALE - 8)*e.scale*(BASE_SCALE - 8)*e.scale)
+			{
+				e.die();
+				alive = 0;
+				break;
+			}
+		}
+	}
+}

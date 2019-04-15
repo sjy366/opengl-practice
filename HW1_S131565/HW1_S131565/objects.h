@@ -847,3 +847,83 @@ void draw_sword() {
 
 	glBindVertexArray(0);
 }
+
+// slug
+
+GLfloat slug_body[4][2] = { {6,0}, {0,8}, {-6,0}, {0,-8} };
+
+GLfloat slug_color[1][3] = {{ 255 / 255.0f, 0 / 255.0f, 102 / 255.0f }};
+
+GLuint VBO_slug, VAO_slug;
+
+void prepare_slug() {
+	GLsizeiptr buffer_size = sizeof(slug_body);
+
+	// Initialize vertex buffer object.
+	glGenBuffers(1, &VBO_slug);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO_slug);
+	glBufferData(GL_ARRAY_BUFFER, buffer_size, NULL, GL_STATIC_DRAW); // allocate buffer object memory
+
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(slug_body), slug_body);
+
+	// Initialize vertex array object.
+	glGenVertexArrays(1, &VAO_slug);
+	glBindVertexArray(VAO_slug);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO_slug);
+	glVertexAttribPointer(LOC_VERTEX, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
+
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+}
+
+void draw_slug() {
+	glBindVertexArray(VAO_slug);
+
+	glUniform3fv(loc_primitive_color, 1, slug_color[0]);
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+	glBindVertexArray(0);
+}
+
+// slug2
+
+GLfloat slug2_body[4][2] = { {6,0}, {0,8}, {-6,0}, {0,-8} };
+
+GLfloat slug2_color[1][3] = { { 255 / 255.0f, 255 / 255.0f, 51 / 255.0f } };
+
+GLuint VBO_slug2, VAO_slug2;
+
+void prepare_slug2() {
+	GLsizeiptr buffer_size = sizeof(slug2_body);
+
+	// Initialize vertex buffer object.
+	glGenBuffers(1, &VBO_slug2);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO_slug2);
+	glBufferData(GL_ARRAY_BUFFER, buffer_size, NULL, GL_STATIC_DRAW); // allocate buffer object memory
+
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(slug2_body), slug2_body);
+
+	// Initialize vertex array object.
+	glGenVertexArrays(1, &VAO_slug2);
+	glBindVertexArray(VAO_slug2);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO_slug2);
+	glVertexAttribPointer(LOC_VERTEX, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
+
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+}
+
+void draw_slug2() {
+	glBindVertexArray(VAO_slug2);
+
+	glUniform3fv(loc_primitive_color, 1, slug2_color[0]);
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+	glBindVertexArray(0);
+}
