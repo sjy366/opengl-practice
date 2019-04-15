@@ -927,3 +927,110 @@ void draw_slug2() {
 
 	glBindVertexArray(0);
 }
+
+// ufo
+#define UFO_BODY 0
+#define UFO_LEFT_WING 1
+#define UFO_RIGHT_WING 2
+#define UFO_LEFT_SUB_WING 3
+#define UFO_RIGHT_SUB_WING 4
+#define UFO_WINDOW 5
+#define UFO_LEFT_BOOST 6
+#define UFO_RIGHT_BOOST 7
+#define UFO_HEAD 8
+
+GLfloat ufo_body[4][2] = { {10, 3}, {-10, 3}, {-10, -3}, {10, -3} };
+GLfloat ufo_head[3][2] = { {3, 0}, {0, 10}, {-3, 0} };
+GLfloat ufo_left_wing[3][2] = { {-10, 10}, {-11, -6}, {-4, -6} };
+GLfloat ufo_right_wing[3][2] = { {10, 10}, {11, -6}, {4, -6} };
+GLfloat ufo_left_sub_wing[3][2] = { {-6, -4}, {-8, -10}, {-4, -10} };
+GLfloat ufo_right_sub_wing[3][2] = { {6, -4}, {8, -10}, {4, -10} };
+GLfloat ufo_window[4][2] = { {0, 5}, {-3, 0}, {0, -3}, {3, 0} };
+GLfloat ufo_left_boost[3][2] = { {-3, -3}, {-1, -3}, {-2, -7} };
+GLfloat ufo_right_boost[3][2] = { {3, -3}, {1, -3}, {2, -7} };
+
+GLfloat ufo_color[9][3] = {
+	{ 204 / 255.0f, 255 / 255.0f, 255 / 255.0f },
+	{ 51 / 255.0f, 102 / 255.0f, 102 / 255.0f },
+	{ 51 / 255.0f, 102 / 255.0f, 102 / 255.0f },
+	{ 51 / 255.0f, 102 / 255.0f, 102 / 255.0f },
+	{ 51 / 255.0f, 102 / 255.0f, 102 / 255.0f },
+	{ 0 / 255.0f, 204 / 255.0f, 255 / 255.0f },
+	{ 204 / 255.0f, 0 / 255.0f, 0 / 255.0f },
+	{ 204 / 255.0f, 0 / 255.0f, 0 / 255.0f },
+	{ 204 / 255.0f, 255 / 255.0f, 255 / 255.0f }
+};
+
+// new object
+GLuint VBO_ufo, VAO_ufo;
+
+void prepare_ufo() {
+	GLsizeiptr buffer_size = sizeof(ufo_body) + sizeof(ufo_left_wing) + sizeof(ufo_right_wing) + sizeof(ufo_left_sub_wing) + sizeof(ufo_right_sub_wing)
+							+ sizeof(ufo_window) + sizeof(ufo_left_boost) + sizeof(ufo_right_boost) + sizeof(ufo_head);
+
+	// Initialize vertex buffer object.
+	glGenBuffers(1, &VBO_ufo);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO_ufo);
+	glBufferData(GL_ARRAY_BUFFER, buffer_size, NULL, GL_STATIC_DRAW); // allocate buffer object memory
+
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(ufo_body), ufo_body);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(ufo_body), sizeof(ufo_head), ufo_head);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(ufo_body) + sizeof(ufo_head), sizeof(ufo_left_wing), ufo_left_wing);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(ufo_body) + sizeof(ufo_head) + sizeof(ufo_left_wing), sizeof(ufo_right_wing), ufo_right_wing);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(ufo_body) + sizeof(ufo_head) + sizeof(ufo_left_wing) + sizeof(ufo_right_wing), sizeof(ufo_left_sub_wing), ufo_left_sub_wing);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(ufo_body) + sizeof(ufo_head) + sizeof(ufo_left_wing) + sizeof(ufo_right_wing) + sizeof(ufo_left_sub_wing),
+		sizeof(ufo_right_sub_wing), ufo_right_sub_wing);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(ufo_body) + sizeof(ufo_head) + sizeof(ufo_left_wing) + sizeof(ufo_right_wing) + sizeof(ufo_left_sub_wing)
+		+ sizeof(ufo_right_sub_wing), sizeof(ufo_window), ufo_window);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(ufo_body) + sizeof(ufo_head) + sizeof(ufo_left_wing) + sizeof(ufo_right_wing) + sizeof(ufo_left_sub_wing)
+		+ sizeof(ufo_right_sub_wing) + sizeof(ufo_window), sizeof(ufo_left_boost), ufo_left_boost);
+	glBufferSubData(GL_ARRAY_BUFFER, sizeof(ufo_body) + sizeof(ufo_head) + sizeof(ufo_left_wing) + sizeof(ufo_right_wing) + sizeof(ufo_left_sub_wing)
+		+ sizeof(ufo_right_sub_wing) + sizeof(ufo_window) + sizeof(ufo_left_boost), sizeof(ufo_right_boost), ufo_right_boost);
+	
+
+	// Initialize vertex array object.
+	glGenVertexArrays(1, &VAO_ufo);
+	glBindVertexArray(VAO_ufo);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO_ufo);
+	glVertexAttribPointer(LOC_VERTEX, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
+
+	glEnableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+}
+
+void draw_ufo() {
+	glBindVertexArray(VAO_ufo);
+
+	glUniform3fv(loc_primitive_color, 1, ufo_color[UFO_BODY]);
+	glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+	glUniform3fv(loc_primitive_color, 1, ufo_color[UFO_HEAD]);
+	glDrawArrays(GL_TRIANGLE_FAN, 4, 3);
+
+	glUniform3fv(loc_primitive_color, 1, ufo_color[UFO_LEFT_WING]);
+	glDrawArrays(GL_TRIANGLE_FAN, 7, 3);
+
+	glUniform3fv(loc_primitive_color, 1, ufo_color[UFO_RIGHT_WING]);
+	glDrawArrays(GL_TRIANGLE_FAN, 10, 3);
+	
+	glUniform3fv(loc_primitive_color, 1, ufo_color[UFO_LEFT_SUB_WING]);
+	glDrawArrays(GL_TRIANGLE_FAN, 13, 3);
+
+	glUniform3fv(loc_primitive_color, 1, ufo_color[UFO_RIGHT_SUB_WING]);
+	glDrawArrays(GL_TRIANGLE_FAN, 16, 3);
+
+	glUniform3fv(loc_primitive_color, 1, ufo_color[UFO_WINDOW]);
+	glDrawArrays(GL_TRIANGLE_FAN, 19, 4);
+
+	glUniform3fv(loc_primitive_color, 1, ufo_color[UFO_LEFT_BOOST]);
+	glDrawArrays(GL_TRIANGLE_FAN, 23, 3);
+
+	glUniform3fv(loc_primitive_color, 1, ufo_color[UFO_RIGHT_BOOST]);
+	glDrawArrays(GL_TRIANGLE_FAN, 26, 3);
+
+	
+	glBindVertexArray(0);
+}

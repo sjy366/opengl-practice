@@ -472,10 +472,11 @@ void display(void) {
 	{
 		ModelMatrix = glm::mat4(1.0f);
 		ModelMatrix = glm::translate(ModelMatrix, glm::vec3(king.x, king.y, 0.0f));
+		ModelMatrix = glm::rotate(ModelMatrix, 180 * TO_RADIAN, glm::vec3(0.0f, 0.0f, 1.0f));
 		ModelMatrix = glm::scale(ModelMatrix, glm::vec3(king.scale, king.scale, 1.0f));
 		ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
 		glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-		draw_car2();
+		draw_ufo();
 	}
 
 	if (my_airplane.alive)
@@ -527,7 +528,9 @@ void timer(int value) {
 		}
 		else
 		{
+			printf("**************************************************************\n");
 			printf("The enemy king is coming!!\n");
+			printf("**************************************************************\n");
 			king.set_xy(0, win_height / 2 + 30);
 			king_stage = 1;
 		}
@@ -564,13 +567,19 @@ void timer(int value) {
 
 	if (!my_airplane.alive && !game_over)
 	{
+		printf("**************************************************************\n");
 		printf("GAME OVER!!\n");
+		printf("**************************************************************\n\n");
+		printf("\nPress the ESC key...\n");
 		game_over = 1;
 	}
 	if (!king.alive && !game_over)
 	{
 		while (!enemy_vec.empty()) enemy_vec.pop_front();
+		printf("**************************************************************\n");
 		printf("GAME CLEAR!!\n");
+		printf("**************************************************************\n\n");
+		printf("\nPress the ESC key...\n");
 		game_over = 1;
 	}
 	glutTimerFunc(10, timer, 0);
@@ -691,6 +700,7 @@ void prepare_scene(void) {
 	prepare_sword();
 	prepare_slug();
 	prepare_slug2();
+	prepare_ufo();
 }
 
 void initialize_renderer(void) {
@@ -724,25 +734,25 @@ void greetings(char *program_name, char messages[][256], int n_message_lines) {
 	for (int i = 0; i < n_message_lines; i++)
 		fprintf(stdout, "%s\n", messages[i]);
 	fprintf(stdout, "\n**************************************************************\n\n");
-	printf("\nLet's start!\nYour level is 0.\n");
+	printf("Let's start!\n\nlevel up!! [0]\n");
 }
 
 #define N_MESSAGE_LINES 12
 void main(int argc, char *argv[]) {
 	char program_name[64] = "Sogang CSE4170 Simple OpenGL 2D Game";
 	char messages[N_MESSAGE_LINES][256] = {
-		"    - Keys used:",
-		"      ESC: 프로그램 종료",
-		"      상하좌우: 비행기 이동",
-		"      SPACE: 슬러그 발사\n"
-		"    - Hint:",
-		"      적군을 죽이면, 일정확률로 강화무기가 나온다.",
-		"      강화무기를 먹으면, 레벨이 올라간다.",
-		"      레벨이 올라가면, 슬러그의 형태가 바뀌고 1몫이 추가된다.",
-		"      최대 레벨은 2 이다.",
-		"      일정수 이상의 적군을 죽이면, 최종보스가 등장한다.",
-		"      최종보스는 여러대를 맞추어야 죽는다.",
-		"      최종보스를 잡으면 게임이 종료된다."
+		"    - Keys used:\n",
+		"      * ESC: 프로그램 종료",
+		"      * UP/DOWN/LEFT/RIGHT: 비행기 이동",
+		"      * SPACE: 슬러그 발사\n\n"
+		"    - Hint:\n",
+		"      * 적군을 죽이면, 일정확률로 강화무기가 나온다.",
+		"      * 강화무기를 먹으면, 레벨이 올라간다.",
+		"      * 레벨이 올라가면, 슬러그의 형태가 바뀌고 1몫이 추가된다.",
+		"      * 최대 레벨은 2 이다.",
+		"      * 일정수 이상의 적군을 죽이면, 최종보스가 등장한다.",
+		"      * 최종보스는 여러대를 맞추어야 죽는다.",
+		"      * 최종보스를 잡으면 게임이 종료된다."
 	};
 
 	glutInit(&argc, argv);
