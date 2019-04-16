@@ -7,6 +7,7 @@
 #define BASE_SCALE 10
 #define KING_IS_COMING 5
 #define KING_HP 20
+#define BOMB_TIME 1000
 
 using namespace std;
 
@@ -284,15 +285,7 @@ struct enemy_king
 	{
 		x = xx; y = yy;
 	}
-	void damage()
-	{
-		if (hp > 0)
-		{
-			hp--;
-			printf("HP of the king: %d!!\n", hp);
-		}
-		else alive = 0;
-	}
+	void damage();
 	void move()
 	{
 		x += dx; y += dy;
@@ -301,6 +294,7 @@ struct enemy_king
 	void shoot()
 	{
 		float a, b;
+		slug_vec.push_back(slug(x, y, BASE_TYPE_SLUG, 8, 1));
 		slug_vec.push_back(slug(x, y, 3, 8, 1));
 		slug_vec.push_back(slug(x, y, 4, 8, 1));
 		for (float i = -0.6, a = 1; i < 0; i += 0.4 * a, a += 1)
@@ -383,12 +377,63 @@ int ay[8] = {0, 1, 1, 1, 0, -1, -1, -1};
 int by[8] = {0, -1, 0, -1, 0, 1, 0, 1};
 bool king_stage = 0;
 
+int bomb_on = 0;
+int bomb[3] = { 0 };
+int bomb_clock = 0;
+
 void display(void) {
 	int i;
 	float x, r, s, delx, delr, dels;
 	glm::mat4 ModelMatrix;
 
 	glClear(GL_COLOR_BUFFER_BIT);
+
+	// bombs
+	if (bomb[0])
+	{
+		for (int i = 1; i <= 3; i++)
+		{
+			ModelMatrix = glm::mat4(1.0f);
+			ModelMatrix = glm::rotate(ModelMatrix, bomb_clock*TO_RADIAN, glm::vec3(0.0f, 0.0f, 1.0f));
+			ModelMatrix = glm::translate(ModelMatrix, glm::vec3(70 * i, 70 * i, 0.0f));
+			ModelMatrix = glm::rotate(ModelMatrix, bomb_clock*TO_RADIAN, glm::vec3(0.0f, 0.0f, 1.0f));
+			ModelMatrix = glm::scale(ModelMatrix, glm::vec3(i, i, 1.0f));
+			ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
+			glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+			draw_hat();
+		}
+	}
+	if (bomb[1])
+	{
+		int dir;
+		if (bomb_clock % 2 == 0) dir = -1;
+		else dir = 1;
+
+		ModelMatrix = glm::mat4(1.0f);
+		ModelMatrix = glm::translate(ModelMatrix, glm::vec3(bomb_clock % 500 - 250, bomb_clock % 500 - 250, 0.0f));
+		ModelMatrix = glm::rotate(ModelMatrix, bomb_clock*TO_RADIAN, glm::vec3(0.0f, 0.0f, 1.0f));
+		ModelMatrix = glm::translate(ModelMatrix, glm::vec3(-30, 30, 0.0f));
+		ModelMatrix = glm::scale(ModelMatrix, glm::vec3((float)bomb_clock/200.0, (float)bomb_clock/200.0, 1.0f));
+		ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
+		glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+		draw_car2();
+	}
+	if (bomb[2])
+	{
+		ModelMatrix = glm::mat4(1.0f);
+		ModelMatrix = glm::rotate(ModelMatrix, bomb_clock*TO_RADIAN, glm::vec3(0.0f, 0.0f, 1.0f));
+		ModelMatrix = glm::translate(ModelMatrix, glm::vec3(70, 70, 0.0f));
+		ModelMatrix = glm::rotate(ModelMatrix, bomb_clock*TO_RADIAN, glm::vec3(0.0f, 0.0f, 1.0f));
+		ModelMatrix = glm::translate(ModelMatrix, glm::vec3(60, 70, 0.0f));
+		ModelMatrix = glm::rotate(ModelMatrix, bomb_clock*TO_RADIAN, glm::vec3(0.0f, 0.0f, 1.0f));
+		ModelMatrix = glm::translate(ModelMatrix, glm::vec3(50, 70, 0.0f));
+		ModelMatrix = glm::rotate(ModelMatrix, bomb_clock*TO_RADIAN, glm::vec3(0.0f, 0.0f, 1.0f));
+		ModelMatrix = glm::translate(ModelMatrix, glm::vec3(40, 70, 0.0f));
+		ModelMatrix = glm::scale(ModelMatrix, glm::vec3(2, 2, 1.0f));
+		ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
+		glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+		draw_cake();
+	}
 
 	for (int i = 0; i < slug_vec.size(); i++)
 	{
@@ -397,6 +442,7 @@ void display(void) {
 		{
 			ModelMatrix = glm::mat4(1.0f);
 			ModelMatrix = glm::translate(ModelMatrix, glm::vec3(s.x, s.y, 0.0f));
+			ModelMatrix = glm::scale(ModelMatrix, glm::vec3(1.5, 1.5, 1.0f));
 			ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix;
 			glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 			if (!s.flag) draw_slug();
@@ -529,7 +575,7 @@ void timer(int value) {
 		else
 		{
 			printf("**************************************************************\n");
-			printf("The enemy king is coming!!\n");
+			printf("The king is coming!!\n");
 			printf("**************************************************************\n");
 			king.set_xy(0, win_height / 2 + 30);
 			king_stage = 1;
@@ -564,6 +610,11 @@ void timer(int value) {
 
 	glutPostRedisplay();
 	clock_count++;
+	for (int i = 0; i < 3; i++)
+		if (bomb[i] > 0) bomb[i]--;
+	if (bomb[0] == bomb[1] && bomb[1] == bomb[2] && bomb[2] == 0) bomb_on = 0;
+	bomb_clock = (bomb_clock + 1) % 960;
+	while (bomb_on && !slug_vec.empty()) slug_vec.pop_front();
 
 	if (!my_airplane.alive && !game_over)
 	{
@@ -591,10 +642,20 @@ void keyboard(unsigned char key, int x, int y) {
 		glutLeaveMainLoop(); // Incur destuction callback for cleanups.
 		break;
 	case 32: // SPACE key
-		my_airplane.shoot();
+		
+		if(my_airplane.alive) my_airplane.shoot();
 		//printf("*********************************************\n");
 		//for (int i = 0; i < slug_vec.size(); i++)
 		//	printf("%d: [%d %d]\n", i, slug_vec[i].x, slug_vec[i].y);
+		break;
+	case '1':
+		if(!bomb[0] && !bomb_on) bomb[0] = BOMB_TIME, bomb_on = 1;
+		break;
+	case '2':
+		if(!bomb[1] && !bomb_on) bomb[1] = BOMB_TIME, bomb_on = 1;
+		break;
+	case '3':
+		if(!bomb[2] && !bomb_on) bomb[2] = BOMB_TIME, bomb_on = 1;
 		break;
 	}
 }
@@ -620,7 +681,7 @@ void special(int key, int x, int y) {
 		break;
 	}
 	//printf("x: %d, y: %d\n", my_airplane.x, my_airplane.y);
-	//glutPostRedisplay();
+	glutPostRedisplay();
 }
 
 void mouse(int button, int state, int x, int y) {
@@ -737,14 +798,17 @@ void greetings(char *program_name, char messages[][256], int n_message_lines) {
 	printf("Let's start!\n\nlevel up!! [0]\n");
 }
 
-#define N_MESSAGE_LINES 12
+#define N_MESSAGE_LINES 15
 void main(int argc, char *argv[]) {
 	char program_name[64] = "Sogang CSE4170 Simple OpenGL 2D Game";
 	char messages[N_MESSAGE_LINES][256] = {
 		"    - Keys used:\n",
 		"      * ESC: 프로그램 종료",
 		"      * UP/DOWN/LEFT/RIGHT: 비행기 이동",
-		"      * SPACE: 슬러그 발사\n\n"
+		"      * SPACE: 슬러그 발사",
+		"      * '1': 1번 폭탄 발사",
+		"      * '2': 2번 폭탄 발사",		
+		"      * '3': 3번 폭탄 발사\n",
 		"    - Hint:\n",
 		"      * 적군을 죽이면, 일정확률로 강화무기가 나온다.",
 		"      * 강화무기를 먹으면, 레벨이 올라간다.",
@@ -758,6 +822,7 @@ void main(int argc, char *argv[]) {
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGBA | GLUT_MULTISAMPLE);
 	glutInitWindowSize(600, 800);
+	glutInitWindowPosition(800, 0);
 	glutInitContextVersion(4, 0);
 	glutInitContextProfile(GLUT_CORE_PROFILE);
 	glutCreateWindow(program_name);
@@ -820,7 +885,7 @@ void enemy::die()
 	alive = 0;
 	kill++;
 	printf("Killed %d enemies!!\n", kill);
-	if(rand() % 3 == 0) items_vec.push_back(items(x, y));
+	if(rand() % 2 == 0) items_vec.push_back(items(x, y));
 	effect_vec.push_back(effect(x, y));
 }
 
@@ -835,5 +900,19 @@ void airplane::level_down()
 	{
 		level--;
 		printf("level down!! [%d]\n", level);
+	}
+}
+
+void enemy_king::damage()
+{
+	if (hp > 0)
+	{
+		hp--;
+		printf("HP of the king: %d!!\n", hp);
+	}
+	else
+	{
+		alive = 0;
+		effect_vec.push_back(effect(x, y));
 	}
 }
