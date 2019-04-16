@@ -5,8 +5,8 @@
 #include <stdlib.h>
 
 #define BASE_SCALE 10
-#define KING_IS_COMING 20
-#define KING_HP 50
+#define KING_IS_COMING 5
+#define KING_HP 20
 
 using namespace std;
 
@@ -181,7 +181,7 @@ struct airplane
 #define COCKTAIL 0
 #define SHIRT 1
 #define HOUSE 2
-#define PIKACHU 3
+#define CAR 3
 
 struct enemy
 {
@@ -206,7 +206,6 @@ struct enemy
 		dir_count = 0;
 		dir = 1;
 		scale = 1.5;
-		if (type == PIKACHU) scale = 2.5;
 		alive = 1;
 	}
 	void move()
@@ -214,16 +213,16 @@ struct enemy
 		float dx, dy;
 		switch (type)
 		{
-		case 0:
+		case COCKTAIL:
 			dx = 0.25 * dir; dy = -0.5;
 			break;
-		case 1:
+		case SHIRT:
 			dx = 0.25; dy = -0.5;
 			break;
-		case 2:
+		case HOUSE:
 			dx = (float)sin(count) / 3; dy = -0.5;
 			break;
-		case 3:
+		case CAR:
 			dx = -(float)sin(count) / 3; dy = -0.5;
 			break;
 		}
@@ -249,7 +248,7 @@ struct enemy
 			slug_vec.push_back(slug(x, y, 1, 4, 1));
 			slug_vec.push_back(slug(x, y, 2, 4, 1));
 			break;
-		case PIKACHU:
+		case CAR:
 			slug_vec.push_back(slug(x, y, 0, 4, 1));
 			slug_vec.push_back(slug(x, y, 1, 4, 1));
 			slug_vec.push_back(slug(x, y, 2, 4, 1));
@@ -441,8 +440,8 @@ void display(void) {
 			case HOUSE:
 				draw_house();
 				break;
-			case PIKACHU:
-				draw_pikachu();
+			case CAR:
+				draw_car();
 				break;
 			}
 		}
@@ -702,7 +701,6 @@ void prepare_scene(void) {
 	prepare_slug();
 	prepare_slug2();
 	prepare_ufo();
-	prepare_pikachu();
 }
 
 void initialize_renderer(void) {
@@ -792,7 +790,7 @@ void slug::collision_check()
 		for (int i = 0; i < enemy_vec.size(); i++)
 		{
 			enemy& e = enemy_vec[i];
-			if (e.alive && distance(x, y, e.x, e.y) < ((BASE_SCALE+5)*1.5*(BASE_SCALE+5)*1.5))
+			if (e.alive && distance(x, y, e.x, e.y) < ((BASE_SCALE+5)*e.scale*(BASE_SCALE+5)*e.scale))
 			{
 				e.die();
 				alive = 0;
