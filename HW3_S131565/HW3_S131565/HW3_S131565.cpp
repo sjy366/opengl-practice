@@ -22,120 +22,150 @@ glm::mat4 ViewProjectionMatrix, ViewMatrix, ProjectionMatrix;
 
 glm::mat4 ModelMatrix_CAR_BODY, ModelMatrix_CAR_WHEEL, ModelMatrix_CAR_NUT, ModelMatrix_CAR_DRIVER;
 glm::mat4 ModelMatrix_CAR_BODY_to_DRIVER; // computed only once in initialize_camera()
+glm::mat4 ModelMatrix_TIGER, ModelMatrix_TIGER_EYE;
+glm::mat4 ModelMatrix_TIGER_to_EYE; // computed only once in initialize_camera()
 
 #include "Camera.h"
 #include "Geometry.h"
 
 /*********************************  START: callbacks *********************************/
+int camera_toggle[4] = { 0, 0, 0, 0 };
 int flag_draw_world_objects = 1;
 float tiger_length = 10, tiger_d = 0.1;
 int angle = 0;
 int spider_angle = 0, wolf_angle = 0;
 int spider_move = 1;
-int ironman_angle;
-float bike_position = 0;
+int ironman_angle = 0, ironman_speed = 1;
+bool bike_action = 0, spider_action = 0;
+float bike_position = 0, bike_up_speed = 0;
+float spider_position = 0, spider_up_speed = 0;
+float gravity = 0.98;
 
 void display(void) {
-	glm::mat4 ModelMatrix_big_cow, ModelMatrix_small_cow;
-	glm::mat4 ModelMatrix_big_box, ModelMatrix_small_box;
-
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	ModelViewProjectionMatrix = glm::translate(ViewProjectionMatrix, glm::vec3(-50.0f, 0.0f, -50.0f));
-	ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(100.0f, 100.0f, 100.0f));
-	ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix,
-		90.0f*TO_RADIAN, glm::vec3(1.0f, 0.0f, 0.0f));
-	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	draw_object(OBJECT_SQUARE16, 20 / 255.0f, 90 / 255.0f, 50 / 255.0f);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //  draw the floor.
 
 	ModelMatrix_CAR_BODY = glm::rotate(glm::mat4(1.0f), -rotation_angle_car, glm::vec3(0.0f, 1.0f, 0.0f));
 	ModelMatrix_CAR_BODY = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(20.0f, 4.89f, 0.0f));
 	ModelMatrix_CAR_BODY = glm::rotate(ModelMatrix_CAR_BODY, 90.0f*TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
 
-	if (camera_type == CAMERA_DRIVER) set_ViewMatrix_for_driver();
-
-	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix_CAR_BODY;
-	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	draw_car_dummy(); // draw car
-
-	ModelViewProjectionMatrix = glm::scale(ViewProjectionMatrix, glm::vec3(5.0f, 5.0f, 5.0f));
-	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	glLineWidth(2.0f);
-	draw_axes();
-	glLineWidth(1.0f); // draw axes
-
 	int time_clock = rotation_angle_tiger / TO_RADIAN;
 	if (time_clock % 90 == 0) tiger_d *= -1;
-	ModelViewProjectionMatrix = glm::rotate(ViewProjectionMatrix, rotation_angle_tiger, glm::vec3(0.0f, 1.0f, 0.0f));
-	ModelViewProjectionMatrix = glm::translate(ModelViewProjectionMatrix, glm::vec3(-1 * (tiger_length + tiger_d), 0.0f, 0.0f));
-	ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix, -90.0f*TO_RADIAN, glm::vec3(1.0f, 0.0f, 0.0f));
-	ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(0.1f, 0.1f, 0.1f));
+	ModelMatrix_TIGER = glm::rotate(glm::mat4(1.0f), rotation_angle_tiger, glm::vec3(0.0f, 1.0f, 0.0f));
+	ModelMatrix_TIGER = glm::translate(ModelMatrix_TIGER, glm::vec3(-1 * (tiger_length + tiger_d), 0.0f, 0.0f));
+	ModelMatrix_TIGER = glm::rotate(ModelMatrix_TIGER, 90.0f*TO_RADIAN, glm::vec3(1.0f, 0.0f, 0.0f));
+	ModelMatrix_TIGER = glm::scale(ModelMatrix_TIGER, glm::vec3(0.1f, 0.1f, 0.1f));
 
-	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	draw_tiger(); // draw tiger
+	for (int i = 0; i < 4; i++)
+		if(camera_toggle[i])
+		{
+			set_ViewProcjetionMatrix(i);
+			glViewport(camera_wv[i].x, camera_wv[i].y, camera_wv[i].xx, camera_wv[i].yy);
 
-	ModelViewProjectionMatrix = glm::rotate(ViewProjectionMatrix, -ironman_angle*TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
-	ModelViewProjectionMatrix = glm::translate(ModelViewProjectionMatrix, glm::vec3(15.0f, 20.0f, 0.0f));
-	ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix, 45.0f*TO_RADIAN, glm::vec3(1.0f, 0.0f, 0.0f));
-	ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix, 45.0f*TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
-	ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(3.0f, 3.0f, 3.0f));
-	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	draw_ironman();
+			ModelViewProjectionMatrix = glm::translate(ViewProjectionMatrix, glm::vec3(-50.0f, 0.0f, -50.0f));
+			ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(100.0f, 100.0f, 100.0f));
+			ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix,
+				90.0f*TO_RADIAN, glm::vec3(1.0f, 0.0f, 0.0f));
+			glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			draw_object(OBJECT_SQUARE16, 20 / 255.0f, 90 / 255.0f, 50 / 255.0f);
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //  draw the floor.
 
-	ModelViewProjectionMatrix = glm::rotate(ViewProjectionMatrix, -spider_angle * TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
-	ModelViewProjectionMatrix = glm::translate(ModelViewProjectionMatrix, glm::vec3(30.0f, 0.0f, 0.0f));
-	ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(5.0f, -5.0f, 5.0f));
-	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	draw_spider();
+			ModelMatrix_CAR_BODY = glm::rotate(glm::mat4(1.0f), -rotation_angle_car, glm::vec3(0.0f, 1.0f, 0.0f));
+			ModelMatrix_CAR_BODY = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(20.0f, 4.89f, 0.0f));
+			ModelMatrix_CAR_BODY = glm::rotate(ModelMatrix_CAR_BODY, 90.0f*TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
 
-	ModelViewProjectionMatrix = glm::rotate(ViewProjectionMatrix, -wolf_angle * TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
-	ModelViewProjectionMatrix = glm::translate(ModelViewProjectionMatrix, glm::vec3(45.0f, 0.0f, 0.0f));
-	ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(10.0f, 10.0f, 10.0f));
-	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	draw_wolf();
+			ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix_CAR_BODY;
+			glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+			draw_car_dummy(); // draw car
 
-	ModelViewProjectionMatrix = glm::translate(ViewProjectionMatrix, glm::vec3(bike_position, 0.0f, 35.0f));
-	ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix, 90.0f*TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
-	ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(2.0f, 2.0f, 2.0f));
-	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	draw_bike();
+			ModelViewProjectionMatrix = glm::scale(ViewProjectionMatrix, glm::vec3(5.0f, 5.0f, 5.0f));
+			glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+			glLineWidth(2.0f);
+			draw_axes();
+			glLineWidth(1.0f); // draw axes
 
-	ModelViewProjectionMatrix = glm::rotate(ViewProjectionMatrix, 215.0f*TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
-	ModelViewProjectionMatrix = glm::translate(ModelViewProjectionMatrix, glm::vec3(-10.0f, 30.0f, -10.0f));
-	ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix, 30.0f*TO_RADIAN, glm::vec3(0.0f, 0.0f, 1.0f));
-	ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(0.7f, 0.7f, 0.7f));
-	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	draw_dragon();
+			int time_clock = rotation_angle_tiger / TO_RADIAN;
+			ModelViewProjectionMatrix = glm::rotate(ViewProjectionMatrix, rotation_angle_tiger, glm::vec3(0.0f, 1.0f, 0.0f));
+			ModelViewProjectionMatrix = glm::translate(ModelViewProjectionMatrix, glm::vec3(-1 * (tiger_length + tiger_d), 0.0f, 0.0f));
+			ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix, -90.0f*TO_RADIAN, glm::vec3(1.0f, 0.0f, 0.0f));
+			ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(0.1f, 0.1f, 0.1f));
 
+			glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+			draw_tiger(); // draw tiger
+
+			ModelViewProjectionMatrix = glm::rotate(ViewProjectionMatrix, -ironman_angle * TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
+			ModelViewProjectionMatrix = glm::translate(ModelViewProjectionMatrix, glm::vec3(15.0f, 20.0f, 0.0f));
+			ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix, 45.0f*TO_RADIAN, glm::vec3(1.0f, 0.0f, 0.0f));
+			ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix, 45.0f*TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
+			ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(3.0f, 3.0f, 3.0f));
+			glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+			draw_ironman();
+
+			ModelViewProjectionMatrix = glm::rotate(ViewProjectionMatrix, -spider_angle * TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
+			ModelViewProjectionMatrix = glm::translate(ModelViewProjectionMatrix, glm::vec3(30.0f, spider_position, 0.0f));
+			ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(5.0f, -5.0f, 5.0f));
+			glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+			draw_spider();
+
+			ModelViewProjectionMatrix = glm::rotate(ViewProjectionMatrix, -wolf_angle * TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
+			ModelViewProjectionMatrix = glm::translate(ModelViewProjectionMatrix, glm::vec3(45.0f, 0.0f, 0.0f));
+			ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(10.0f, 10.0f, 10.0f));
+			glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+			draw_wolf();
+
+			ModelViewProjectionMatrix = glm::translate(ViewProjectionMatrix, glm::vec3(0.0f, bike_position, 35.0f));
+			ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix, 90.0f*TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
+			ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(2.0f, 2.0f, 2.0f));
+			glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+			draw_bike();
+
+			ModelViewProjectionMatrix = glm::rotate(ViewProjectionMatrix, 215.0f*TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
+			ModelViewProjectionMatrix = glm::translate(ModelViewProjectionMatrix, glm::vec3(-10.0f, 30.0f, -10.0f));
+			ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix, 30.0f*TO_RADIAN, glm::vec3(0.0f, 0.0f, 1.0f));
+			ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(0.7f, 0.7f, 0.7f));
+			glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+			draw_dragon();
+		}
 	glutSwapBuffers();
 }
 
 void keyboard(unsigned char key, int x, int y) {
 	switch (key) {
-	case 'a':
+	case 'a': // move or stop spider
 		if (spider_move) spider_move = 0;
 		else spider_move = 1;
 		break;
 	case 'b':
-		ironman_angle = (ironman_angle + 1) % 360;
+		if (!spider_action)
+		{
+			spider_action = 1;
+			spider_up_speed = 4;
+		}
 		break;
 	case 'c':
-		bike_position += 1;
+		ironman_speed += 1;
 		break;
 	case 'd':
-		bike_position -= 1;
+		ironman_speed -= 1;
 		break;
-	case 'w':
-		camera_type = CAMERA_WORLD_VIEWER;
-		set_ViewMatrix_for_world_viewer();
-		ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
-		glutPostRedisplay();
+	case 'e': // move bike
+		if (!bike_action)
+		{
+			bike_action = 1;
+			bike_up_speed = 7;
+		}
 		break;
-	case 'o':
-		flag_draw_world_objects = 1 - flag_draw_world_objects;
-		glutPostRedisplay();
+	case '1': // sub
+		if (camera_toggle[1]) camera_toggle[1] = 0;
+		else camera_toggle[1] = 1;
+		break;
+	case '2': // car
+		if (camera_toggle[2]) camera_toggle[2] = 0;
+		else camera_toggle[2] = 1;
+		break;
+	case '3': // tiger
+		if (camera_toggle[3]) camera_toggle[3] = 0;
+		else camera_toggle[3] = 1;
 		break;
 	case 27: // ESC key
 		glutLeaveMainLoop(); // Incur destuction callback for cleanups.
@@ -143,47 +173,30 @@ void keyboard(unsigned char key, int x, int y) {
 	}
 }
 
-int prevx, prevy;
-
-void motion(int x, int y) {
-	if (!camera_wv.move | (camera_type != CAMERA_WORLD_VIEWER))
-		return;
-
-	renew_cam_position(prevy - y);
-	renew_cam_orientation_rotation_around_v_axis(prevx - x);
-
-	prevx = x; prevy = y;
-
-	set_ViewMatrix_for_world_viewer();
-	ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
-
-	glutPostRedisplay();
-}
-
-void mouse(int button, int state, int x, int y) {
-	if ((button == GLUT_LEFT_BUTTON)) {
-		if (state == GLUT_DOWN) {
-			camera_wv.move = 1;
-			prevx = x; prevy = y;
-		}
-		else if (state == GLUT_UP) camera_wv.move = 0;
-	}
-}
-
-void reshape(int width, int height) {
-	glViewport(0, 0, width, height);
-
-	camera_wv.aspect_ratio = (float)width / height;
-
-	ProjectionMatrix = glm::perspective(TO_RADIAN*camera_wv.fovy, camera_wv.aspect_ratio, camera_wv.near_c, camera_wv.far_c);
-	ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
-
-	glutPostRedisplay();
-}
-
 void timer_scene(int timestamp_scene) {
+	if (bike_action)
+	{
+		bike_up_speed -= gravity;
+		bike_position += bike_up_speed;
+		if (bike_position < 0.01)
+		{
+			bike_position -= bike_up_speed;
+			bike_action = 0;
+		}
+	}
+	if (spider_action)
+	{
+		spider_up_speed -= gravity;
+		spider_position += spider_up_speed;
+		if (spider_position < 0.01)
+		{
+			spider_position -= spider_up_speed;
+			spider_action = 0;
+		}
+	}
 	angle = (timestamp_scene % 360)*TO_RADIAN;
 	if (spider_move) spider_angle = (spider_angle + 2) % 360;
+	ironman_angle = (ironman_angle + ironman_speed) % 360;
 	wolf_angle = (wolf_angle + 3) % 360;
 	rotation_angle_car = (timestamp_scene % 360)*TO_RADIAN;
 	cur_frame_tiger = timestamp_scene % N_TIGER_FRAMES;
@@ -194,6 +207,38 @@ void timer_scene(int timestamp_scene) {
 
 	glutPostRedisplay();
 	glutTimerFunc(100, timer_scene, (timestamp_scene + 1) % INT_MAX);
+}
+
+int prevx, prevy;
+
+void motion(int x, int y) {
+	if (camera_wv[MAIN].move)
+	{
+		int key = glutGetModifiers();
+		if (key == GLUT_ACTIVE_SHIFT)
+		{
+			renew_cam_position(MAIN, prevx - x);
+		}
+	}
+
+	prevx = x; prevy = y;
+	set_ViewProcjetionMatrix(MAIN);
+
+	glutPostRedisplay();
+}
+
+void mouse(int button, int state, int x, int y) {
+	if ((button == GLUT_LEFT_BUTTON)) {
+		if (state == GLUT_DOWN) {
+			camera_wv[MAIN].move = 1;
+			prevx = x; prevy = y;
+		}
+		else if (state == GLUT_UP) camera_wv[MAIN].move = 0;
+	}
+}
+
+void reshape(int width, int height) {
+	glutPostRedisplay();
 }
 
 void cleanup(void) {
