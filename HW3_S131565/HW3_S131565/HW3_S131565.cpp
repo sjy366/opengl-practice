@@ -1,6 +1,6 @@
 #define _CRT_SECURE_NO_WARNINGS
 
-#define TO_RADIAN 0.01745329252f  
+#define TO_RADIAN 0.01745329252f 
 #define TO_DEGREE 57.295779513f
 
 #include <stdio.h>
@@ -26,79 +26,29 @@ glm::mat4 ModelMatrix_CAR_BODY_to_DRIVER; // computed only once in initialize_ca
 #include "Camera.h"
 #include "Geometry.h"
 
-float rotation_angle_car = 0.0f;
-
-void draw_objects_in_world(void) {
-	// Removed
-}
-
-#define rad 1.7f
-#define ww 1.0f
-void draw_wheel_and_nut() {
-	// angle is used in Hierarchical_Car_Correct later
-	int i;
-
-	glUniform3f(loc_primitive_color, 0.000f, 0.808f, 0.820f); // color name: DarkTurquoise
-	draw_geom_obj(GEOM_OBJ_ID_CAR_WHEEL); // draw wheel
-
-	for (i = 0; i < 5; i++) {
-		ModelMatrix_CAR_NUT = glm::rotate(ModelMatrix_CAR_WHEEL, TO_RADIAN*72.0f*i, glm::vec3(0.0f, 0.0f, 1.0f));
-		ModelMatrix_CAR_NUT = glm::translate(ModelMatrix_CAR_NUT, glm::vec3(rad - 0.5f, 0.0f, ww));
-		ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix_CAR_NUT;
-		glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-
-		glUniform3f(loc_primitive_color, 0.690f, 0.769f, 0.871f); // color name: LightSteelBlue
-		draw_geom_obj(GEOM_OBJ_ID_CAR_NUT); // draw i-th nut
-	}
-}
-
-void draw_car_dummy(void) {
-	glUniform3f(loc_primitive_color, 0.498f, 1.000f, 0.831f); // color name: Aquamarine
-	draw_geom_obj(GEOM_OBJ_ID_CAR_BODY); // draw body
-
-	glLineWidth(2.0f);
-	draw_axes(); // draw MC axes of body
-	glLineWidth(1.0f);
-
-	ModelMatrix_CAR_DRIVER = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(-3.0f, 0.5f, 2.5f));
-	ModelMatrix_CAR_DRIVER = glm::rotate(ModelMatrix_CAR_DRIVER, TO_RADIAN*90.0f, glm::vec3(0.0f, 1.0f, 0.0f));
-	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix_CAR_DRIVER;
-	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	glLineWidth(5.0f);
-	draw_axes(); // draw camera frame at driver seat
-	glLineWidth(1.0f);
-
-	ModelMatrix_CAR_WHEEL = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(-3.9f, -3.5f, 4.5f));
-	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix_CAR_WHEEL;
-	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	draw_wheel_and_nut();  // draw wheel 0
-
-	ModelMatrix_CAR_WHEEL = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(3.9f, -3.5f, 4.5f));
-	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix_CAR_WHEEL;
-	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	draw_wheel_and_nut();  // draw wheel 1
-
-	ModelMatrix_CAR_WHEEL = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(-3.9f, -3.5f, -4.5f));
-	ModelMatrix_CAR_WHEEL = glm::scale(ModelMatrix_CAR_WHEEL, glm::vec3(1.0f, 1.0f, -1.0f));
-	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix_CAR_WHEEL;
-	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	draw_wheel_and_nut();  // draw wheel 2
-
-	ModelMatrix_CAR_WHEEL = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(3.9f, -3.5f, -4.5f));
-	ModelMatrix_CAR_WHEEL = glm::scale(ModelMatrix_CAR_WHEEL, glm::vec3(1.0f, 1.0f, -1.0f));
-	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix_CAR_WHEEL;
-	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	draw_wheel_and_nut();  // draw wheel 3
-}
-
 /*********************************  START: callbacks *********************************/
 int flag_draw_world_objects = 1;
+float tiger_length = 10, tiger_d = 0.1;
+int angle = 0;
+int spider_angle = 0, wolf_angle = 0;
+int spider_move = 1;
+int ironman_angle;
+float bike_position = 0;
 
 void display(void) {
 	glm::mat4 ModelMatrix_big_cow, ModelMatrix_small_cow;
 	glm::mat4 ModelMatrix_big_box, ModelMatrix_small_box;
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	ModelViewProjectionMatrix = glm::translate(ViewProjectionMatrix, glm::vec3(-50.0f, 0.0f, -50.0f));
+	ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(100.0f, 100.0f, 100.0f));
+	ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix,
+		90.0f*TO_RADIAN, glm::vec3(1.0f, 0.0f, 0.0f));
+	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	draw_object(OBJECT_SQUARE16, 20 / 255.0f, 90 / 255.0f, 50 / 255.0f);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //  draw the floor.
 
 	ModelMatrix_CAR_BODY = glm::rotate(glm::mat4(1.0f), -rotation_angle_car, glm::vec3(0.0f, 1.0f, 0.0f));
 	ModelMatrix_CAR_BODY = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(20.0f, 4.89f, 0.0f));
@@ -108,37 +58,74 @@ void display(void) {
 
 	ModelViewProjectionMatrix = ViewProjectionMatrix * ModelMatrix_CAR_BODY;
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	draw_car_dummy();
+	draw_car_dummy(); // draw car
 
 	ModelViewProjectionMatrix = glm::scale(ViewProjectionMatrix, glm::vec3(5.0f, 5.0f, 5.0f));
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 	glLineWidth(2.0f);
 	draw_axes();
-	glLineWidth(1.0f);
+	glLineWidth(1.0f); // draw axes
 
-	ModelViewProjectionMatrix = ViewProjectionMatrix;
+	int time_clock = rotation_angle_tiger / TO_RADIAN;
+	if (time_clock % 90 == 0) tiger_d *= -1;
+	ModelViewProjectionMatrix = glm::rotate(ViewProjectionMatrix, rotation_angle_tiger, glm::vec3(0.0f, 1.0f, 0.0f));
+	ModelViewProjectionMatrix = glm::translate(ModelViewProjectionMatrix, glm::vec3(-1 * (tiger_length + tiger_d), 0.0f, 0.0f));
+	ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix, -90.0f*TO_RADIAN, glm::vec3(1.0f, 0.0f, 0.0f));
+	ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(0.1f, 0.1f, 0.1f));
+
 	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
-	draw_path();
+	draw_tiger(); // draw tiger
 
-	if (flag_draw_world_objects)
-		draw_objects_in_world();
+	ModelViewProjectionMatrix = glm::rotate(ViewProjectionMatrix, -ironman_angle*TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
+	ModelViewProjectionMatrix = glm::translate(ModelViewProjectionMatrix, glm::vec3(15.0f, 20.0f, 0.0f));
+	ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix, 45.0f*TO_RADIAN, glm::vec3(1.0f, 0.0f, 0.0f));
+	ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix, 45.0f*TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
+	ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(3.0f, 3.0f, 3.0f));
+	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+	draw_ironman();
+
+	ModelViewProjectionMatrix = glm::rotate(ViewProjectionMatrix, -spider_angle * TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
+	ModelViewProjectionMatrix = glm::translate(ModelViewProjectionMatrix, glm::vec3(30.0f, 0.0f, 0.0f));
+	ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(5.0f, -5.0f, 5.0f));
+	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+	draw_spider();
+
+	ModelViewProjectionMatrix = glm::rotate(ViewProjectionMatrix, -wolf_angle * TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
+	ModelViewProjectionMatrix = glm::translate(ModelViewProjectionMatrix, glm::vec3(45.0f, 0.0f, 0.0f));
+	ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(10.0f, 10.0f, 10.0f));
+	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+	draw_wolf();
+
+	ModelViewProjectionMatrix = glm::translate(ViewProjectionMatrix, glm::vec3(bike_position, 0.0f, 35.0f));
+	ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix, 90.0f*TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
+	ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(2.0f, 2.0f, 2.0f));
+	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+	draw_bike();
+
+	ModelViewProjectionMatrix = glm::rotate(ViewProjectionMatrix, 215.0f*TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
+	ModelViewProjectionMatrix = glm::translate(ModelViewProjectionMatrix, glm::vec3(-10.0f, 30.0f, -10.0f));
+	ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix, 30.0f*TO_RADIAN, glm::vec3(0.0f, 0.0f, 1.0f));
+	ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(0.7f, 0.7f, 0.7f));
+	glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
+	draw_dragon();
 
 	glutSwapBuffers();
 }
 
 void keyboard(unsigned char key, int x, int y) {
 	switch (key) {
-	case 'f':
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		glutPostRedisplay();
+	case 'a':
+		if (spider_move) spider_move = 0;
+		else spider_move = 1;
 		break;
-	case 'l':
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		glutPostRedisplay();
+	case 'b':
+		ironman_angle = (ironman_angle + 1) % 360;
+		break;
+	case 'c':
+		bike_position += 1;
 		break;
 	case 'd':
-		camera_type = CAMERA_DRIVER;
-		glutPostRedisplay();
+		bike_position -= 1;
 		break;
 	case 'w':
 		camera_type = CAMERA_WORLD_VIEWER;
@@ -195,7 +182,16 @@ void reshape(int width, int height) {
 }
 
 void timer_scene(int timestamp_scene) {
+	angle = (timestamp_scene % 360)*TO_RADIAN;
+	if (spider_move) spider_angle = (spider_angle + 2) % 360;
+	wolf_angle = (wolf_angle + 3) % 360;
 	rotation_angle_car = (timestamp_scene % 360)*TO_RADIAN;
+	cur_frame_tiger = timestamp_scene % N_TIGER_FRAMES;
+	rotation_angle_tiger = (timestamp_scene % 360)*TO_RADIAN;
+	cur_frame_ben = timestamp_scene % N_BEN_FRAMES;
+	cur_frame_wolf = timestamp_scene % N_WOLF_FRAMES;
+	cur_frame_spider = timestamp_scene % N_SPIDER_FRAMES;
+
 	glutPostRedisplay();
 	glutTimerFunc(100, timer_scene, (timestamp_scene + 1) % INT_MAX);
 }
@@ -211,6 +207,9 @@ void cleanup(void) {
 	free_geom_obj(GEOM_OBJ_ID_COW);
 	free_geom_obj(GEOM_OBJ_ID_TEAPOT);
 	free_geom_obj(GEOM_OBJ_ID_BOX);
+
+	glDeleteVertexArrays(N_OBJECTS, object_VAO);
+	glDeleteBuffers(N_OBJECTS, object_VBO);
 }
 /*********************************  END: callbacks *********************************/
 
@@ -256,6 +255,15 @@ void initialize_OpenGL(void) {
 void prepare_scene(void) {
 	prepare_axes();
 	prepare_path();
+	prepare_square();
+	prepare_tiger();
+	prepare_cow();
+	prepare_ironman();
+	prepare_bike();
+	prepare_spider();
+	prepare_wolf();
+	prepare_dragon();
+
 	prepare_geom_obj(GEOM_OBJ_ID_CAR_BODY, "Data/car_body_triangles_v.txt", GEOM_OBJ_TYPE_V);
 	prepare_geom_obj(GEOM_OBJ_ID_CAR_WHEEL, "Data/car_wheel_triangles_v.txt", GEOM_OBJ_TYPE_V);
 	prepare_geom_obj(GEOM_OBJ_ID_CAR_NUT, "Data/car_nut_triangles_v.txt", GEOM_OBJ_TYPE_V);
@@ -308,7 +316,7 @@ void greetings(char *program_name, char messages[][256], int n_message_lines) {
 
 #define N_MESSAGE_LINES 2
 void main(int argc, char *argv[]) {
-	char program_name[64] = "Sogang CSE4170 4.7.1.Hier_Car_Dummy_Driver_GLSL";
+	char program_name[64] = "HW3_S131565";
 	char messages[N_MESSAGE_LINES][256] = { "    - Keys used: 'f', l', 'd', 'w', 'o', 'ESC'",
 											"    - Mouse used: L-Click and move" };
 
