@@ -1,5 +1,8 @@
 HW*_S131565/Debug/
-HW*_S131565/Release/
+HW*_S131565/Release/*.exe
+HW*_S131565/Release/*.iobj
+HW*_S131565/Release/*.ipdb
+HW*_S131565/Release/*.pdb
 HW*_S131565/x64/
 HW*_S131565/.vs/
 HW*_S131565/HW*_S131565.txt
