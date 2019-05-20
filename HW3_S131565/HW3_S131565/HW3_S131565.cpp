@@ -27,11 +27,11 @@ glm::mat4 ModelMatrix_TIGER_to_EYE; // computed only once in initialize_camera()
 
 #include "Camera.h"
 #include "Geometry.h"
+#include <math.h>
 
 /*********************************  START: callbacks *********************************/
-int camera_toggle[4] = { 0, 0, 0, 0 };
+int camera_toggle[4] = { 1, 0, 0, 0 };
 int flag_draw_world_objects = 1;
-float tiger_length = 10, tiger_d = 0.1;
 int angle = 0;
 int spider_angle = 0, wolf_angle = 0;
 int spider_move = 1;
@@ -48,18 +48,15 @@ void display(void) {
 	ModelMatrix_CAR_BODY = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(20.0f, 4.89f, 0.0f));
 	ModelMatrix_CAR_BODY = glm::rotate(ModelMatrix_CAR_BODY, 90.0f*TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
 
-	int time_clock = rotation_angle_tiger / TO_RADIAN;
-	if (time_clock % 90 == 0) tiger_d *= -1;
-	ModelMatrix_TIGER = glm::rotate(glm::mat4(1.0f), rotation_angle_tiger, glm::vec3(0.0f, 1.0f, 0.0f));
-	ModelMatrix_TIGER = glm::translate(ModelMatrix_TIGER, glm::vec3(-1 * (tiger_length + tiger_d), 0.0f, 0.0f));
-	ModelMatrix_TIGER = glm::rotate(ModelMatrix_TIGER, 90.0f*TO_RADIAN, glm::vec3(1.0f, 0.0f, 0.0f));
-	ModelMatrix_TIGER = glm::scale(ModelMatrix_TIGER, glm::vec3(0.1f, 0.1f, 0.1f));
+	ModelMatrix_TIGER = glm::rotate(glm::mat4(1.0f), -rotation_angle_tiger, glm::vec3(0.0f, 1.0f, 0.0f));
+	ModelMatrix_TIGER = glm::translate(ModelMatrix_TIGER, glm::vec3(30.0f, (sin(rotation_angle_tiger * 10) + 1) * 3.0f, 0.0f));
+	ModelMatrix_TIGER = glm::rotate(ModelMatrix_TIGER, -90.0f*TO_RADIAN, glm::vec3(1.0f, 0.0f, 0.0f));
+	ModelMatrix_TIGER = glm::scale(ModelMatrix_TIGER, glm::vec3(0.07f, 0.07f, 0.07f));
 
 	for (int i = 0; i < 4; i++)
 		if(camera_toggle[i])
 		{
-			set_ViewProcjetionMatrix(i);
-			glViewport(camera_wv[i].x, camera_wv[i].y, camera_wv[i].xx, camera_wv[i].yy);
+			set_ViewProjection(i);
 
 			ModelViewProjectionMatrix = glm::translate(ViewProjectionMatrix, glm::vec3(-50.0f, 0.0f, -50.0f));
 			ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(100.0f, 100.0f, 100.0f));
@@ -69,7 +66,7 @@ void display(void) {
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 			draw_object(OBJECT_SQUARE16, 20 / 255.0f, 90 / 255.0f, 50 / 255.0f);
 			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //  draw the floor.
-
+			
 			ModelMatrix_CAR_BODY = glm::rotate(glm::mat4(1.0f), -rotation_angle_car, glm::vec3(0.0f, 1.0f, 0.0f));
 			ModelMatrix_CAR_BODY = glm::translate(ModelMatrix_CAR_BODY, glm::vec3(20.0f, 4.89f, 0.0f));
 			ModelMatrix_CAR_BODY = glm::rotate(ModelMatrix_CAR_BODY, 90.0f*TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
@@ -84,12 +81,10 @@ void display(void) {
 			draw_axes();
 			glLineWidth(1.0f); // draw axes
 
-			int time_clock = rotation_angle_tiger / TO_RADIAN;
-			ModelViewProjectionMatrix = glm::rotate(ViewProjectionMatrix, rotation_angle_tiger, glm::vec3(0.0f, 1.0f, 0.0f));
-			ModelViewProjectionMatrix = glm::translate(ModelViewProjectionMatrix, glm::vec3(-1 * (tiger_length + tiger_d), 0.0f, 0.0f));
+			ModelViewProjectionMatrix = glm::rotate(ViewProjectionMatrix, -rotation_angle_tiger, glm::vec3(0.0f, 1.0f, 0.0f));
+			ModelViewProjectionMatrix = glm::translate(ModelViewProjectionMatrix, glm::vec3(30.0f, (sin(rotation_angle_tiger * 10) + 1) * 3.0f, 0.0f));
 			ModelViewProjectionMatrix = glm::rotate(ModelViewProjectionMatrix, -90.0f*TO_RADIAN, glm::vec3(1.0f, 0.0f, 0.0f));
-			ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(0.1f, 0.1f, 0.1f));
-
+			ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(0.07f, 0.07f, 0.07f));
 			glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 			draw_tiger(); // draw tiger
 
@@ -103,7 +98,7 @@ void display(void) {
 
 			ModelViewProjectionMatrix = glm::rotate(ViewProjectionMatrix, -spider_angle * TO_RADIAN, glm::vec3(0.0f, 1.0f, 0.0f));
 			ModelViewProjectionMatrix = glm::translate(ModelViewProjectionMatrix, glm::vec3(30.0f, spider_position, 0.0f));
-			ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(5.0f, -5.0f, 5.0f));
+			ModelViewProjectionMatrix = glm::scale(ModelViewProjectionMatrix, glm::vec3(7.0f, -7.0f, 7.0f));
 			glUniformMatrix4fv(loc_ModelViewProjectionMatrix, 1, GL_FALSE, &ModelViewProjectionMatrix[0][0]);
 			draw_spider();
 
@@ -131,29 +126,59 @@ void display(void) {
 
 void keyboard(unsigned char key, int x, int y) {
 	switch (key) {
-	case 'a': // move or stop spider
+	case 'q': // move or stop spider
 		if (spider_move) spider_move = 0;
 		else spider_move = 1;
 		break;
-	case 'b':
+	case 'w':
 		if (!spider_action)
 		{
 			spider_action = 1;
 			spider_up_speed = 4;
 		}
 		break;
-	case 'c':
+	case 'e':
 		ironman_speed += 1;
 		break;
-	case 'd':
+	case 'r':
 		ironman_speed -= 1;
 		break;
-	case 'e': // move bike
+	case 't': // move bike
 		if (!bike_action)
 		{
 			bike_action = 1;
 			bike_up_speed = 7;
 		}
+		break;
+	case 'a':
+		renew_sub_naxis(-5);
+		break;
+	case 's':
+		renew_sub_naxis(5);
+		break;
+	case 'd':
+		renew_sub_uaxis(-5);
+		break;
+	case 'f':
+		renew_sub_uaxis(5);
+		break;
+	case 'g':
+		renew_sub_vaxis(-5);
+		break;
+	case 'h':
+		renew_sub_vaxis(5);
+		break;
+	case 'j':
+		renew_sub_rotation_around_v_axis(-5);
+		break;
+	case 'k':
+		renew_sub_rotation_around_v_axis(5);
+		break;
+	case 'l':
+		renew_sub_naxis(-5);
+		break;
+	case ';':
+		renew_sub_naxis(5);
 		break;
 	case '1': // sub
 		if (camera_toggle[1]) camera_toggle[1] = 0;
@@ -169,6 +194,24 @@ void keyboard(unsigned char key, int x, int y) {
 		break;
 	case 27: // ESC key
 		glutLeaveMainLoop(); // Incur destuction callback for cleanups.
+		break;
+	}
+}
+
+void special(int key, int x, int y) {
+	switch (key)
+	{
+	case GLUT_KEY_LEFT:
+		renew_spherical_horizontal(-5);
+		break;
+	case GLUT_KEY_RIGHT:
+		renew_spherical_horizontal(5);
+		break;
+	case GLUT_KEY_DOWN:
+		renew_spherical_vertical(-5);
+		break;
+	case GLUT_KEY_UP:
+		renew_spherical_vertical(5);
 		break;
 	}
 }
@@ -200,7 +243,7 @@ void timer_scene(int timestamp_scene) {
 	wolf_angle = (wolf_angle + 3) % 360;
 	rotation_angle_car = (timestamp_scene % 360)*TO_RADIAN;
 	cur_frame_tiger = timestamp_scene % N_TIGER_FRAMES;
-	rotation_angle_tiger = (timestamp_scene % 360)*TO_RADIAN;
+	rotation_angle_tiger = (timestamp_scene % 720)*TO_RADIAN;
 	cur_frame_ben = timestamp_scene % N_BEN_FRAMES;
 	cur_frame_wolf = timestamp_scene % N_WOLF_FRAMES;
 	cur_frame_spider = timestamp_scene % N_SPIDER_FRAMES;
@@ -212,17 +255,17 @@ void timer_scene(int timestamp_scene) {
 int prevx, prevy;
 
 void motion(int x, int y) {
-	if (camera_wv[MAIN].move)
-	{
-		int key = glutGetModifiers();
-		if (key == GLUT_ACTIVE_SHIFT)
-		{
-			renew_cam_position(MAIN, prevx - x);
-		}
-	}
+	int key = glutGetModifiers();
+	if (!camera_wv.move | (camera_type != CAMERA_WORLD_VIEWER) | (key != GLUT_ACTIVE_SHIFT))
+		return;
+
+	renew_cam_position(prevx - x);
+	//renew_cam_orientation_rotation_around_v_axis(prevx - x);
 
 	prevx = x; prevy = y;
-	set_ViewProcjetionMatrix(MAIN);
+
+	set_ViewMatrix_for_world_viewer();
+	ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
 
 	glutPostRedisplay();
 }
@@ -230,14 +273,21 @@ void motion(int x, int y) {
 void mouse(int button, int state, int x, int y) {
 	if ((button == GLUT_LEFT_BUTTON)) {
 		if (state == GLUT_DOWN) {
-			camera_wv[MAIN].move = 1;
+			camera_wv.move = 1;
 			prevx = x; prevy = y;
 		}
-		else if (state == GLUT_UP) camera_wv[MAIN].move = 0;
+		else if (state == GLUT_UP) camera_wv.move = 0;
 	}
 }
 
 void reshape(int width, int height) {
+	glViewport(0, 0, width, height);
+
+	camera_wv.aspect_ratio = (float)width / height;
+
+	ProjectionMatrix = glm::perspective(TO_RADIAN*camera_wv.fovy, camera_wv.aspect_ratio, camera_wv.near_c, camera_wv.far_c);
+	ViewProjectionMatrix = ProjectionMatrix * ViewMatrix;
+
 	glutPostRedisplay();
 }
 
@@ -261,6 +311,7 @@ void cleanup(void) {
 void register_callbacks(void) {
 	glutDisplayFunc(display);
 	glutKeyboardFunc(keyboard);
+	glutSpecialFunc(special);
 	glutMouseFunc(mouse);
 	glutMotionFunc(motion);
 	glutReshapeFunc(reshape);
@@ -362,7 +413,7 @@ void greetings(char *program_name, char messages[][256], int n_message_lines) {
 #define N_MESSAGE_LINES 2
 void main(int argc, char *argv[]) {
 	char program_name[64] = "HW3_S131565";
-	char messages[N_MESSAGE_LINES][256] = { "    - Keys used: 'f', l', 'd', 'w', 'o', 'ESC'",
+	char messages[N_MESSAGE_LINES][256] = { "    - Keys used: q w e r t a s d f g h j k l ; up down left right shift ESC",
 											"    - Mouse used: L-Click and move" };
 
 	glutInit(&argc, argv);
