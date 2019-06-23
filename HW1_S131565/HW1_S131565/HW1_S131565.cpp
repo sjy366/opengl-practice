@@ -575,7 +575,7 @@ void timer(int value) {
 		else
 		{
 			printf("**************************************************************\n");
-			printf("The king is coming!!\n");
+			printf("The enemy king is coming!!\n");
 			printf("**************************************************************\n");
 			king.set_xy(0, win_height / 2 + 30);
 			king_stage = 1;
