@@ -1,3 +1,4 @@
+.gitignore
 HW*_S131565/Debug/
 HW*_S131565/Release/*.exe
 HW*_S131565/Release/*.iobj
@@ -13,3 +14,6 @@ HW*_S131565/HW*_S131565/x64/
 HW*_S131565/HW*_S131565/HW*_S131565.vcxproj
 HW*_S131565/HW*_S131565/HW*_S131565.vcxproj.filters
 HW*_S131565/HW*_S131565/HW*_S131565.vcxproj.user
+HW1_S131565/Release/
+*.pdf
+
